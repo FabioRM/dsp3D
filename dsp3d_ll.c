@@ -85,8 +85,8 @@ void dsp3D_LL_clearDepthBuffer(void)
 {
 	int32_t x, y;
 
-	for(x=0;x<SCREEN_WIDTH;x++)
-		for(y=0;y<SCREEN_HEIGHT;y++)
+	for(x = 0; x < SCREEN_WIDTH; x++)
+		for(y = 0;y < SCREEN_HEIGHT; y++)
 			dsp3D_LL_writeToDepthBuffer((x + y * SCREEN_WIDTH) * 4, FLT_MAX);
 }
 

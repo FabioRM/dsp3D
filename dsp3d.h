@@ -44,11 +44,9 @@ Four rendering methods are available:
 	- Wireframe rendering
 	- Point rendering
 
-After rendering, the screen need to be drawn. Use:
-	- dsp3D_presentAndClearDepthBuffer after Gouraud or Flat Surface
-	- dsp3D_present after Wireframe or Point
+After rendering, the screen need to be drawn. Use dsp3D_present
 
-It is easily extensible to support different face colors and maybe texture.
+It is easily extensible to support different face colors and maybe textures.
 Tested on ST's 32F746-Discovery board
 ******************************************************************************/
 

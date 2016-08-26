@@ -44,11 +44,9 @@ Four rendering methods are available:
 	- Wireframe rendering
 	- Point rendering
 
-After rendering, the screen need to be drawn. Use:
-	- dsp3D_presentAndClearDepthBuffer after Gouraud or Flat Surface
-	- dsp3D_present after Wireframe or Point
+After rendering, the screen need to be drawn. Use dsp3D_present
 
-It is easily extensible to support different face colors and maybe texture.
+It is easily extensible to support different face colors and maybe textures.
 Tested on ST's 32F746-Discovery board
 ******************************************************************************/
 
@@ -74,6 +72,8 @@ float32_t matrix_world[16] = 			{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.
 float32_t matrix_worldView[16] = 		{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 float32_t matrix_transform[16] = 		{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 float32_t matrix_transformhelper[16] = 	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+uint8_t lastRenderingType;
 
 arm_matrix_instance_f32 instance_matrix_view;
 arm_matrix_instance_f32 instance_matrix_rotation;
@@ -682,68 +682,9 @@ void dsp3D_init(void)
 
 	dsp3D_generateMatrices();
 
-	dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
-	dsp3D_LL_clearDepthBuffer();
-}
+	//dsp3D_present();
 
-void dsp3D_renderFlat(void* meshPointer)
-{
-	int32_t i;
-	int32_t a, b, c;
-	
-	float32_t vertex_transform_a[9];
-	float32_t vertex_transform_b[9];
-	float32_t vertex_transform_c[9];
-	float32_t vertex_a[3];
-	float32_t vertex_b[3];
-	float32_t vertex_c[3];
-	float32_t vertex_norm_a[3];
-	float32_t vertex_norm_b[3];
-	float32_t vertex_norm_c[3];
-	float32_t face_norm[3];
-
-	dsp3D_generateMatrices();
-
-	genericMesh* mesh = (genericMesh*)meshPointer;
-
-	for(i = 0; i < mesh->numFaces; i++)
-	{
-		a = mesh->faces[i][0];
-		b = mesh->faces[i][1];
-		c = mesh->faces[i][2];
-
-		vertex_a[0] = mesh->vertices[a][0];
-		vertex_a[1] = mesh->vertices[a][1];
-		vertex_a[2] = mesh->vertices[a][2];
-		vertex_norm_a[0] = mesh->verticesNormal[a][0];
-		vertex_norm_a[1] = mesh->verticesNormal[a][1];
-		vertex_norm_a[2] = mesh->verticesNormal[a][2];
-
-		vertex_b[0] = mesh->vertices[b][0];
-		vertex_b[1] = mesh->vertices[b][1];
-		vertex_b[2] = mesh->vertices[b][2];
-		vertex_norm_b[0] = mesh->verticesNormal[b][0];
-		vertex_norm_b[1] = mesh->verticesNormal[b][1];
-		vertex_norm_b[2] = mesh->verticesNormal[b][2];
-
-		vertex_c[0] = mesh->vertices[c][0];
-		vertex_c[1] = mesh->vertices[c][1];
-		vertex_c[2] = mesh->vertices[c][2];
-		vertex_norm_c[0] = mesh->verticesNormal[c][0];
-		vertex_norm_c[1] = mesh->verticesNormal[c][1];
-		vertex_norm_c[2] = mesh->verticesNormal[c][2];
-
-		dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
-
-		if(face_norm[2] < 0)
-		{
-			dsp3D_projectVertexComplete(vertex_a, vertex_norm_a, vertex_transform_a);
-			dsp3D_projectVertexComplete(vertex_b, vertex_norm_b, vertex_transform_b);
-			dsp3D_projectVertexComplete(vertex_c, vertex_norm_c, vertex_transform_c);
-
-			dsp3D_drawFaceFlat(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
-		}
-	}
+	lastRenderingType = 0;
 }
 
 void dsp3D_renderGouraud(void* meshPointer)
@@ -804,6 +745,72 @@ void dsp3D_renderGouraud(void* meshPointer)
 			dsp3D_drawFaceGouraud(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
 		}
 	}
+
+	if(lastRenderingType < 2)
+		lastRenderingType = 2;
+}
+
+void dsp3D_renderFlat(void* meshPointer)
+{
+	int32_t i;
+	int32_t a, b, c;
+	
+	float32_t vertex_transform_a[9];
+	float32_t vertex_transform_b[9];
+	float32_t vertex_transform_c[9];
+	float32_t vertex_a[3];
+	float32_t vertex_b[3];
+	float32_t vertex_c[3];
+	float32_t vertex_norm_a[3];
+	float32_t vertex_norm_b[3];
+	float32_t vertex_norm_c[3];
+	float32_t face_norm[3];
+
+	dsp3D_generateMatrices();
+
+	genericMesh* mesh = (genericMesh*)meshPointer;
+
+	for(i = 0; i < mesh->numFaces; i++)
+	{
+		a = mesh->faces[i][0];
+		b = mesh->faces[i][1];
+		c = mesh->faces[i][2];
+
+		vertex_a[0] = mesh->vertices[a][0];
+		vertex_a[1] = mesh->vertices[a][1];
+		vertex_a[2] = mesh->vertices[a][2];
+		vertex_norm_a[0] = mesh->verticesNormal[a][0];
+		vertex_norm_a[1] = mesh->verticesNormal[a][1];
+		vertex_norm_a[2] = mesh->verticesNormal[a][2];
+
+		vertex_b[0] = mesh->vertices[b][0];
+		vertex_b[1] = mesh->vertices[b][1];
+		vertex_b[2] = mesh->vertices[b][2];
+		vertex_norm_b[0] = mesh->verticesNormal[b][0];
+		vertex_norm_b[1] = mesh->verticesNormal[b][1];
+		vertex_norm_b[2] = mesh->verticesNormal[b][2];
+
+		vertex_c[0] = mesh->vertices[c][0];
+		vertex_c[1] = mesh->vertices[c][1];
+		vertex_c[2] = mesh->vertices[c][2];
+		vertex_norm_c[0] = mesh->verticesNormal[c][0];
+		vertex_norm_c[1] = mesh->verticesNormal[c][1];
+		vertex_norm_c[2] = mesh->verticesNormal[c][2];
+
+		dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
+
+		if(face_norm[2] < 0)
+		{
+			dsp3D_projectVertexComplete(vertex_a, vertex_norm_a, vertex_transform_a);
+			dsp3D_projectVertexComplete(vertex_b, vertex_norm_b, vertex_transform_b);
+			dsp3D_projectVertexComplete(vertex_c, vertex_norm_c, vertex_transform_c);
+
+			dsp3D_drawFaceFlat(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
+		}
+	}
+
+	if(lastRenderingType < 2)
+		lastRenderingType = 2;
 }
 
 void dsp3D_renderWireframe(void* meshPointer)
@@ -851,6 +858,9 @@ void dsp3D_renderWireframe(void* meshPointer)
 		dsp3D_drawLine(coord_b[0], coord_b[1], coord_c[0], coord_c[1], LCD_COLOR_WHITE);
 		dsp3D_drawLine(coord_c[0], coord_c[1], coord_a[0], coord_a[1], LCD_COLOR_WHITE);
 	}
+
+	if(lastRenderingType < 1)
+		lastRenderingType = 1;
 }
 
 void dsp3D_renderPoints(void* meshPointer)
@@ -874,6 +884,9 @@ void dsp3D_renderPoints(void* meshPointer)
 
 		dsp3D_drawPoint((int32_t)coord[0], (int32_t)coord[1], LCD_COLOR_WHITE);
 	}
+
+	if(lastRenderingType < 1)
+		lastRenderingType = 1;
 }
 
 void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
@@ -892,15 +905,17 @@ void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
 
 void dsp3D_present(void)
 {
-	dsp3D_LL_switchScreen();
-	dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
-}
-
-void dsp3D_presentAndClearDepthBuffer(void)
-{
-	dsp3D_LL_switchScreen();
-	dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
-	dsp3D_LL_clearDepthBuffer();
+	if(lastRenderingType != 0)
+	{
+		dsp3D_LL_switchScreen();
+		dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
+		if(lastRenderingType == 2)
+		{
+			dsp3D_LL_clearDepthBuffer();
+		}
+		
+		lastRenderingType = 0;
+	}
 }
 
 void dsp3D_generateMatrices(void)
