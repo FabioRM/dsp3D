@@ -44,6 +44,10 @@ Four rendering methods are available:
 	- Wireframe rendering
 	- Point rendering
 
+After rendering, the screen need to be drawn. Use:
+	- dsp3D_presentAndClearDepthBuffer after Gouraud or Flat Surface
+	- dsp3D_present after Wireframe or Point
+
 It is easily extensible to support different face colors and maybe texture.
 Tested on ST's 32F746-Discovery board
 ******************************************************************************/
@@ -77,6 +81,10 @@ void dsp3D_renderGouraud(void *meshPointer);
 void dsp3D_renderFlat(void *meshPointer);
 void dsp3D_renderWireframe(void *meshPointer);
 void dsp3D_renderPoints(void *meshPointer);
+
+void dsp3D_present(void);
+void dsp3D_presentAndClearDepthBuffer(void);
+void dsp3D_generateMatrices(void);
 
 /* Debugging purposes *****************************************************/
 void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z);

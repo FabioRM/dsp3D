@@ -44,6 +44,10 @@ Four rendering methods are available:
 	- Wireframe rendering
 	- Point rendering
 
+After rendering, the screen need to be drawn. Use:
+	- dsp3D_presentAndClearDepthBuffer after Gouraud or Flat Surface
+	- dsp3D_present after Wireframe or Point
+
 It is easily extensible to support different face colors and maybe texture.
 Tested on ST's 32F746-Discovery board
 ******************************************************************************/
@@ -105,9 +109,6 @@ void dsp3D_drawFaceFlat(float32_t *p1, float32_t *p2, float32_t *p3, color32_t c
 void dsp3D_drawFaceGouraud(float32_t *p1, float32_t *p2, float32_t *p3, color32_t color);
 void dsp3D_calculateFaceNormal(float32_t *a, float32_t *b, float32_t *c, float32_t *m, float32_t *n);
 
-void dsp3D_present(void);
-void dsp3D_presentAndClearDepthBuffer(void);
-void dsp3D_generateMatrices(void);
 
 void dsp3D_setCameraPosition(float32_t x, float32_t y, float32_t z)
 {
@@ -681,13 +682,8 @@ void dsp3D_init(void)
 
 	dsp3D_generateMatrices();
 
-	dsp3D_present();
-}
-
-void dsp3D_clearAll(void)
-{
-	dsp3D_presentAndClearDepthBuffer();
-	dsp3D_present();
+	dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
+	dsp3D_LL_clearDepthBuffer();
 }
 
 void dsp3D_renderFlat(void* meshPointer)
@@ -748,8 +744,6 @@ void dsp3D_renderFlat(void* meshPointer)
 			dsp3D_drawFaceFlat(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
 		}
 	}
-
-	dsp3D_presentAndClearDepthBuffer();
 }
 
 void dsp3D_renderGouraud(void* meshPointer)
@@ -810,8 +804,6 @@ void dsp3D_renderGouraud(void* meshPointer)
 			dsp3D_drawFaceGouraud(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
 		}
 	}
-
-	dsp3D_presentAndClearDepthBuffer();
 }
 
 void dsp3D_renderWireframe(void* meshPointer)
@@ -859,8 +851,6 @@ void dsp3D_renderWireframe(void* meshPointer)
 		dsp3D_drawLine(coord_b[0], coord_b[1], coord_c[0], coord_c[1], LCD_COLOR_WHITE);
 		dsp3D_drawLine(coord_c[0], coord_c[1], coord_a[0], coord_a[1], LCD_COLOR_WHITE);
 	}
-
-	dsp3D_present();
 }
 
 void dsp3D_renderPoints(void* meshPointer)
@@ -884,8 +874,6 @@ void dsp3D_renderPoints(void* meshPointer)
 
 		dsp3D_drawPoint((int32_t)coord[0], (int32_t)coord[1], LCD_COLOR_WHITE);
 	}
-
-	dsp3D_present();
 }
 
 void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
@@ -900,8 +888,6 @@ void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
 	vector[2] = z;
 	dsp3D_projectVertex(vector, coord);
 	dsp3D_drawPoint((int32_t)coord[0], (int32_t)coord[1], LCD_COLOR_WHITE);
-
-	dsp3D_present();
 }
 
 void dsp3D_present(void)
