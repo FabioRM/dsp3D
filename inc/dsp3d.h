@@ -35,9 +35,10 @@ or JavaScript" - available on David's website https://www.davrous.com
 ******************************************************************************/
 
 /******************************************************************************
-The dsp3D is a powerful 3D rendering engine for ARM Cortex-M MCUs with DSP.
-It makes use of the ARM CMSIS DSP hardware acceleration to compute math,
-thus allowing a faster operation.
+The dsp3D is a powerful 3D rendering engine designed for ARM Cortex-M processor
+based devices. It takes full advantage of the CMSIS DSP library to provide a
+fast operation. A device equipped also with a hardware floating point unit is
+recommended.
 
 Four rendering methods are available:
 	- Gouraud rendering

@@ -38,7 +38,7 @@ or JavaScript" - available on David's website https://www.davrous.com
 This struct define a 3D model that the dsp3D engine can render. It must be
 populated before launching the rendering
 
-The structure is very simple
+The structure is organized as follows
 	numVert is the total number of vertices in the model
 	numFaces is the total number of faces in the model
 	each vertex has 3 dimensions (x, y, z)
