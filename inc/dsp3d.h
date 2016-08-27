@@ -35,34 +35,57 @@ or JavaScript" - available on David's website https://www.davrous.com
 ******************************************************************************/
 
 /******************************************************************************
-This struct define a 3D model that the dsp3D engine can render. It must be
-populated before launchig the rendering
+The dsp3D is a powerful 3D rendering engine for ARM Cortex-M MCUs with DSP.
+It makes use of the ARM CMSIS DSP hardware acceleration to compute math,
+thus allowing a faster operation.
 
-The structure is very simple
-	numVert is the total number of vertices in the model
-	numFaces is the total number of faces in the model
-	each vertex has 3 dimensions (x, y, z)
-	each vertex has a normal (with 3 dimensions - x, y, z)
-	each face is associated with the index of 3 vertices
-	
+Four rendering methods are available:
+	- Gouraud rendering
+	- Flat surface rendering
+	- Wireframe rendering
+	- Point rendering
+
+After rendering, the screen need to be drawn. Use dsp3D_present
+
+It is easily extensible to support different face colors and maybe textures.
+Tested on ST's 32F746-Discovery board
 ******************************************************************************/
 
-#ifndef __GENERIC_MESH_H__
-#define __GENERIC_MESH_H__
+#ifndef __DSP3D_ENGINE__
+#define __DSP3D_ENGINE__
 
-#include <stdint.h>
-#define float32_t float
+#include "stm32f7xx_hal.h"
+#include "float.h"
+#include "arm_math.h"
+#include "dsp3d_ll.h"
+#include "genericMesh.h"
 
-#define MAX_VERTICES (1024)
-#define MAX_FACES	 (2048)
+#define ABS(x)   		((x) > 0 ? (x) : -(x))
+#define MIN(x, y)		((x) > (y) ? (y) : (x))
+#define MAX(x, y)		((x) < (y) ? (y) : (x))
+#define ROUND(x) 		((x)>=0?(int32_t)((x)+0.5):(int32_t)((x)-0.5))
 
-typedef struct
-{
-	uint32_t numVert;
-	uint32_t numFaces;
-	float32_t vertices[MAX_VERTICES][3];
-	float32_t verticesNormal[MAX_VERTICES][3];
-	uint32_t faces[MAX_FACES][3];
-} genericMesh;
+#define color32_t	uint32_t
+
+void dsp3D_setCameraPosition(float32_t x, float32_t y, float32_t z);
+void dsp3D_setCameraTarget(float32_t x, float32_t y, float32_t z);
+void dsp3D_setMeshPosition(float32_t x, float32_t y, float32_t z);	
+void dsp3D_setMeshRotation(float32_t yaw, float32_t pitch, float32_t roll);
+void dsp3D_setLightPosition(float32_t x, float32_t y, float32_t z);	
+
+void dsp3D_init(void);
+void dsp3D_clearAll(void);
+
+void dsp3D_renderGouraud(void *meshPointer);
+void dsp3D_renderFlat(void *meshPointer);
+void dsp3D_renderWireframe(void *meshPointer);
+void dsp3D_renderPoints(void *meshPointer);
+
+void dsp3D_present(void);
+void dsp3D_presentAndClearDepthBuffer(void);
+void dsp3D_generateMatrices(void);
+
+/* Debugging purposes *****************************************************/
+void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z);
 
 #endif

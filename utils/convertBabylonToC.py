@@ -53,10 +53,22 @@ for file in glob.glob('*.babylon'):
 	iStartIndex = fi_data.find('indices')
 	iStartIndex += fi_data[iStartIndex+1:].find('[') + 2
 	iEndIndex = iStartIndex+fi_data[iStartIndex:].find(']')
+	cStartIndex = fi_data.find('uvCount')
+	cStartIndex += fi_data[cStartIndex+1:].find(':') + 2
+	cEndIndex = cStartIndex+fi_data[cStartIndex:].find(',')
 	f_input.close()
 
 	vertices = fi_data[vStartIndex:vEndIndex].split(',')
 	indices = fi_data[iStartIndex:iEndIndex].split(',')
+	uvCount = int(fi_data[cStartIndex:cEndIndex])
+
+	verticesStep = 6
+
+	if(uvCount == 1):
+		verticesStep = 8
+
+	if(uvCount == 2):
+		verticesStep = 10
 
 	f_input.close()
 
@@ -71,28 +83,25 @@ for file in glob.glob('*.babylon'):
 
 	f_output.write('void init' + name.title() + '(void)\n{\n')
 
-	f_output.write('\t' + name + '.numVert = ' + str(verticesLength / 6) + ';\n')
+	f_output.write('\t' + name + '.numVert = ' + str(verticesLength / verticesStep) + ';\n')
 	f_output.write('\t' + name + '.numFaces = ' + str(indicesLength / 3) + ';\n\n')
 
-	vertex = [0, 0, 0]
-	face = [0, 0, 0]
-
-	for index in range(0, verticesLength / 6):
-		s = '\t' + name + '.vertices['+ str(index) + '][0] = ' + str(vertices[index * 6]) + ';\n'
+	for index in range(0, verticesLength / verticesStep):
+		s = '\t' + name + '.vertices['+ str(index) + '][0] = ' + str(vertices[index * verticesStep]) + ';\n'
 		f_output.write(s);
-		s = '\t' + name + '.vertices['+ str(index) + '][1] = ' + str(vertices[index * 6 + 1]) + ';\n'
+		s = '\t' + name + '.vertices['+ str(index) + '][1] = ' + str(vertices[index * verticesStep + 1]) + ';\n'
 		f_output.write(s);
-		s = '\t' + name + '.vertices['+ str(index) + '][2] = ' + str(vertices[index * 6 + 2]) + ';\n'
+		s = '\t' + name + '.vertices['+ str(index) + '][2] = ' + str(vertices[index * verticesStep + 2]) + ';\n'
 		f_output.write(s);
 
 	f_output.write('\n')
 	
-	for index in range(0, verticesLength / 6):	
-		s = '\t' + name + '.verticesNormal['+ str(index) + '][0] = ' + str(vertices[index * 6 + 3]) + ';\n'
+	for index in range(0, verticesLength / verticesStep):	
+		s = '\t' + name + '.verticesNormal['+ str(index) + '][0] = ' + str(vertices[index * verticesStep + 3]) + ';\n'
 		f_output.write(s);
-		s = '\t' + name + '.verticesNormal['+ str(index) + '][1] = ' + str(vertices[index * 6 + 4]) + ';\n'
+		s = '\t' + name + '.verticesNormal['+ str(index) + '][1] = ' + str(vertices[index * verticesStep + 4]) + ';\n'
 		f_output.write(s);
-		s = '\t' + name + '.verticesNormal['+ str(index) + '][2] = ' + str(vertices[index * 6 + 5]) + ';\n'
+		s = '\t' + name + '.verticesNormal['+ str(index) + '][2] = ' + str(vertices[index * verticesStep + 5]) + ';\n'
 		f_output.write(s);
 
 	f_output.write('\n')
