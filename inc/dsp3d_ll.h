@@ -62,8 +62,4 @@ void dsp3D_LL_writeToDepthBuffer(uint32_t pos, float32_t value);
 float32_t dsp3D_LL_readFromDepthBuffer(uint32_t pos);
 void dsp3D_LL_clearDepthBuffer(void);
 
-/* DEBUG functions ************************************************/
-void dsp3D_LL_printMatrix(float32_t *data, uint32_t length);
-void dsp3D_LL_printVector(float32_t *data, uint32_t length);
-
 #endif

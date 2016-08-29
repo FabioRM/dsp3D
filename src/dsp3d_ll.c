@@ -89,31 +89,3 @@ void dsp3D_LL_clearDepthBuffer(void)
 		for(y = 0;y < SCREEN_HEIGHT; y++)
 			dsp3D_LL_writeToDepthBuffer((x + y * SCREEN_WIDTH) * 4, FLT_MAX);
 }
-
-void dsp3D_LL_printMatrix(float32_t *data, uint32_t length)
-{
-	int32_t x, y;
-	
-	for(x = 0; x < length; x++)
-	{
-		for(y = 0; y < length; y++)
-		{
-			printf("%f\t", data[x * length + y]);
-		}
-		printf("\r\n");
-	}
-	printf("\r\n\r\n");
-}
-
-void dsp3D_LL_printVector(float32_t *data, uint32_t length)
-{
-	int32_t x;
-	
-	for(x = 0; x < length; x++)
-	{
-		printf("%f\t", data[x]);
-		printf("\r\n");
-	}
-	printf("\r\n\r\n");
-}
-
