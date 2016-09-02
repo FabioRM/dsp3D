@@ -8,5 +8,7 @@ Four rendering methods are available:
 	- Point rendering
 
 # Test with ST's 32F746-Discovery board (MCU: STM32F746)
+To see a demo on YouTube: https://www.youtube.com/watch?v=GNKWmLiMpuk
+
 It is capable to render the "Suzanne" head (968 faces, 507 vertices) in 100ms with Gouraud including the screen plotting.
 The math operations required less than 20ms, the sub-optimal performance is caused by the time required to access the external SDRAM embedded on the board (for drawing on the screen and depth buffer r/w).
