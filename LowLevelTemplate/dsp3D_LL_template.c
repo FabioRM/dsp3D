@@ -36,56 +36,75 @@ or JavaScript" - available on David's website https://www.davrous.com
 
 /******************************************************************************
 The dsp3D_ll provides low level interface to the hardware.
-The following takes advantage of the ST HAL libraris, specifically the ones
-for ST's 32F746-Discovery board.
+******************************************************************************/
+
+/******************************************************************************
+Customize thw following to your needs
 ******************************************************************************/
 
 #include "dsp3d_ll.h"
 
-uint32_t LCD_ActiveLayer = 1;
+#undef SCREEN_WIDTH
+#define SCREEN_WIDTH 			(320)
 
-void dsp3D_LL_drawPoint(int32_t x, int32_t y, color32_t color)
+#undef SCREEN_HEIGHT
+#define SCREEN_HEIGHT			(240)
+
+static __IO uint32_t LCD_ActiveLayer = 1;
+static __IO uint32_t maxX = 0;
+static __IO uint32_t maxY = 0;
+static __IO uint32_t minX = SCREEN_WIDTH - 1;
+static __IO uint32_t minY = SCREEN_HEIGHT - 1;
+
+void dsp3D_LL_init(void)
 {
-	BSP_LCD_DrawPixel(x, y, color);
+
+}
+
+void dsp3D_LL_drawPoint(uint32_t x, uint32_t y, color32_t color)
+{
+	if(x < minX)
+		minX = x;
+	if(x > maxX)
+		maxX = x;
+	if(y < minY)
+		minY = y;
+	if(y > maxY)
+		maxY = y;
+
+	// YOUR IMPLEMENTATION
 }
 
 void dsp3D_LL_clearScreen(color32_t color)
 {
-	BSP_LCD_Clear(color);
+	// YOUR IMPLEMENTATION
 }
 
-/******************************************************************************
-This function comes from the work of Clemente Di Caprio on Github
-https://github.com/cledic/STM32F7
-******************************************************************************/
 void dsp3D_LL_switchScreen(void)
 {
-	while (!(LTDC->CDSR & LTDC_CDSR_VSYNCS));
-	BSP_LCD_SetLayerVisible( !LCD_ActiveLayer, DISABLE);
-	while (!(LTDC->CDSR & LTDC_CDSR_VSYNCS));
-	BSP_LCD_SetLayerVisible( LCD_ActiveLayer, ENABLE);
-	BSP_LCD_SelectLayer(!LCD_ActiveLayer);
-	while (!(LTDC->CDSR & LTDC_CDSR_VSYNCS));
-	BSP_LCD_SetLayerVisible( !LCD_ActiveLayer, DISABLE);
-	
-	LCD_ActiveLayer = !LCD_ActiveLayer;
+	// YOUR IMPLEMENTATION
 }
 
 void dsp3D_LL_writeToDepthBuffer(uint32_t pos, float32_t value)
 {
-	*(__IO float32_t*) (DEPTHBUFFER_ADDRESS + pos) = value;
+	// YOUR IMPLEMENTATION
 }
 
 float32_t dsp3D_LL_readFromDepthBuffer(uint32_t pos)
 {
-	return *(__IO float32_t*) (DEPTHBUFFER_ADDRESS + pos);
+	return 0; // YOUR IMPLEMENTATION
 }
 
 void dsp3D_LL_clearDepthBuffer(void)
 {
-	int32_t x, y;
+	uint32_t x, y;
 
-	for(x = 0; x < SCREEN_WIDTH; x++)
-		for(y = 0;y < SCREEN_HEIGHT; y++)
-			dsp3D_LL_writeToDepthBuffer((x + y * SCREEN_WIDTH) * 4, FLT_MAX);
+	for(x = minX; x <= maxX; x++)
+		for(y = minY; y <= maxY; y++)
+			dsp3D_LL_writeToDepthBuffer((x + y * SCREEN_WIDTH) * sizeof(float32_t), FLT_MAX);
+
+	maxX = 0;
+	maxY = 0;
+	minX = SCREEN_WIDTH - 1;
+	minY = SCREEN_HEIGHT - 1;
 }

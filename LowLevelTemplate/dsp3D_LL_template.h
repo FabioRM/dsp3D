@@ -36,8 +36,6 @@ or JavaScript" - available on David's website https://www.davrous.com
 
 /******************************************************************************
 The dsp3D_ll provides low level interface to the hardware.
-The following takes advantage of the ST HAL libraris, specifically the ones
-for ST's 32F746-Discovery board.
 ******************************************************************************/
 	
 #ifndef __DSP3D_LL_ENGINE__
@@ -45,21 +43,55 @@ for ST's 32F746-Discovery board.
 
 #include "main.h"
 
-#define SCREEN_WIDTH			(480)
-#define SCREEN_HEIGHT			(272)
-#define SCREEN_ASPECT_RATIO		((float32_t)SCREEN_WIDTH / (float32_t)SCREEN_HEIGHT)
+#define SCREEN_WIDTH 			(800)
+#define SCREEN_HEIGHT			(480)
 
-#define DEPTHBUFFER_ADDRESS		((LCD_FB_START_ADDRESS + (BSP_LCD_GetXSize() * BSP_LCD_GetYSize() * 4 * 2)))
-
-#define ASSEMBLE_ARGB(A,R,G,B) (A << 24 | R << 16 | G << 8 | B)
-
+/**
+ * @brief      Initialize low level
+ */
 void dsp3D_LL_init(void);
-void dsp3D_LL_drawPoint(int32_t x, int32_t y, uint32_t color);
+
+/**
+ * @brief      Draw a point at position (x, y) with color
+ *
+ * @param[in]  x      x position
+ * @param[in]  y      y position
+ * @param[in]  color  The color
+ */
+void dsp3D_LL_drawPoint(uint32_t x, uint32_t y, uint32_t color);
+
+/**
+ * @brief      Clear the screen with the specified color
+ *
+ * @param[in]  color  The color
+ */
 void dsp3D_LL_clearScreen(uint32_t color);
+
+/**
+ * @brief      Alternate screens (double buffering)
+ */
 void dsp3D_LL_switchScreen(void);
 
+/**
+ * @brief      Write a float to position within depth buffer
+ *
+ * @param[in]  pos    The position
+ * @param[in]  value  The value
+ */
 void dsp3D_LL_writeToDepthBuffer(uint32_t pos, float32_t value);
+
+/**
+ * @brief      Read a float from position of depth buffer
+ *
+ * @param[in]  pos   The position
+ *
+ * @return     The value
+ */
 float32_t dsp3D_LL_readFromDepthBuffer(uint32_t pos);
+
+/**
+ * @brief      Clear the depth buffer
+ */
 void dsp3D_LL_clearDepthBuffer(void);
 
 #endif

@@ -46,10 +46,10 @@ Four rendering methods are available:
 	- Wireframe rendering
 	- Point rendering
 
-After rendering, the screen need to be drawn. Use dsp3D_present
+After rendering, the screen need to be drawn. Use dsp3D_present for this
 
 It is easily extensible to support different face colors and maybe textures.
-Tested on ST's 32F746-Discovery board
+Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 ******************************************************************************/
 
 #ifndef __DSP3D_ENGINE__
@@ -58,35 +58,107 @@ Tested on ST's 32F746-Discovery board
 #include "stm32f7xx_hal.h"
 #include "float.h"
 #include "arm_math.h"
-#include "dsp3d_ll.h"
+#include "dsp3D_LL.h"
 #include "genericMesh.h"
 
-#define ABS(x)   		((x) > 0 ? (x) : -(x))
-#define MIN(x, y)		((x) > (y) ? (y) : (x))
-#define MAX(x, y)		((x) < (y) ? (y) : (x))
-#define ROUND(x) 		((x)>=0?(int32_t)((x)+0.5):(int32_t)((x)-0.5))
+/* defines -----------------------------------------------------------------*/
+#define ASSEMBLE_ARGB(A,R,G,B) (A << 24 | R << 16 | G << 8 | B)
+
+#define SCREEN_ASPECT_RATIO		((float32_t)SCREEN_WIDTH / (float32_t)SCREEN_HEIGHT)
 
 #define color32_t	uint32_t
 
+/**
+ * @brief      Set the camera position in the world
+ *
+ * @param[in]  x     x axis coordinate
+ * @param[in]  y     y axis coordinate
+ * @param[in]  z     z axis coordinate
+ */
 void dsp3D_setCameraPosition(float32_t x, float32_t y, float32_t z);
+
+/**
+ * @brief      Set the point to which the camera is pointing to
+ *
+ * @param[in]  x     x axis coordinate
+ * @param[in]  y     y axis coordinate
+ * @param[in]  z     z axis coordinate
+ */
 void dsp3D_setCameraTarget(float32_t x, float32_t y, float32_t z);
+
+/**
+ * @brief      Set the position of the mesh within the world
+ *
+ * @param[in]  x     x axis coordinate
+ * @param[in]  y     y axis coordinate
+ * @param[in]  z     z axis coordinate
+ */
 void dsp3D_setMeshPosition(float32_t x, float32_t y, float32_t z);	
+
+/**
+ * @brief      Set the rotation of the mesh
+ *
+ * @param[in]  yaw    The yaw
+ * @param[in]  pitch  The pitch
+ * @param[in]  roll   The roll
+ */
 void dsp3D_setMeshRotation(float32_t yaw, float32_t pitch, float32_t roll);
+
+/**
+ * @brief      Set the position of the light within the world
+ * 			   N.B. is omnidirectional
+ *
+ * @param[in]  x     x axis coordinate
+ * @param[in]  y     y axis coordinate
+ * @param[in]  z     z axis coordinate
+ */
 void dsp3D_setLightPosition(float32_t x, float32_t y, float32_t z);	
 
+/**
+ * @brief      Init the dsp3D engine
+ */
 void dsp3D_init(void);
-void dsp3D_clearAll(void);
 
+/**
+ * @brief      Render the mesh with Gouraud shading
+ *
+ * @param      meshPointer  The mesh pointer
+ */
 void dsp3D_renderGouraud(void *meshPointer);
+
+/**
+ * @brief      Render the mesh as flat surfaces
+ *
+ * @param      meshPointer  The mesh pointer
+ */
 void dsp3D_renderFlat(void *meshPointer);
+
+/**
+ * @brief      Render the mesh as wireframe
+ *
+ * @param      meshPointer  The mesh pointer
+ */
 void dsp3D_renderWireframe(void *meshPointer);
+
+/**
+ * @brief      Render only the vertices of the mesh
+ *
+ * @param      meshPointer  The mesh pointer
+ */
 void dsp3D_renderPoints(void *meshPointer);
 
+/**
+ * @brief      Plot the rendered mesh on the current screen
+ */
 void dsp3D_present(void);
-void dsp3D_presentAndClearDepthBuffer(void);
-void dsp3D_generateMatrices(void);
 
-/* Debugging purposes *****************************************************/
+/**
+ * @brief      Render a single vertex within the world
+ *
+ * @param[in]  x     x axis coordinate
+ * @param[in]  y     y axis coordinate
+ * @param[in]  z     z axis coordinate
+ */
 void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z);
 
 #endif

@@ -49,10 +49,15 @@ Four rendering methods are available:
 After rendering, the screen need to be drawn. Use dsp3D_present
 
 It is easily extensible to support different face colors and maybe textures.
-Tested on ST's 32F746-Discovery board
+Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 ******************************************************************************/
 
 #include "dsp3D.h"
+
+#define ABS(x)   		((x) > 0 ? (x) : -(x))
+#define MIN(x, y)		((x) > (y) ? (y) : (x))
+#define MAX(x, y)		((x) < (y) ? (y) : (x))
+#define ROUND(x) 		((x)>=0?(int32_t)((x)+0.5):(int32_t)((x)-0.5))
 
 float32_t cameraPosition[3] = 			{0.0, 0.0, 10.0};
 float32_t cameraTarget[3] = 			{0.0, 0.0, 0.0};
@@ -111,6 +116,7 @@ void dsp3D_drawFaceFlat(float32_t *p1, float32_t *p2, float32_t *p3, color32_t c
 void dsp3D_drawFaceGouraud(float32_t *p1, float32_t *p2, float32_t *p3, color32_t color);
 void dsp3D_calculateFaceNormal(float32_t *a, float32_t *b, float32_t *c, float32_t *m, float32_t *n);
 
+void dsp3D_generateMatrices(void);
 
 void dsp3D_setCameraPosition(float32_t x, float32_t y, float32_t z)
 {
@@ -673,6 +679,8 @@ void dsp3D_calculateFaceNormal(float32_t *a, float32_t *b, float32_t *c, float32
 
 void dsp3D_init(void)
 {
+	dsp3d_LL_init();
+	
 	arm_mat_init_f32(&instance_matrix_view, 4, 4, (float32_t *)matrix_view);
 	arm_mat_init_f32(&instance_matrix_rotation, 4, 4, (float32_t *)matrix_rotation);
 	arm_mat_init_f32(&instance_matrix_translation, 4, 4, (float32_t *)matrix_translation);
@@ -683,8 +691,6 @@ void dsp3D_init(void)
 	arm_mat_init_f32(&instance_matrix_worldView, 4, 4, (float32_t *)matrix_worldView);
 
 	dsp3D_generateMatrices();
-
-	//dsp3D_present();
 
 	lastRenderingType = 0;
 }
@@ -903,21 +909,20 @@ void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
 	vector[2] = z;
 	dsp3D_projectVertex(vector, coord);
 	dsp3D_drawPoint((int32_t)coord[0], (int32_t)coord[1], LCD_COLOR_WHITE);
+	
+	if(lastRenderingType < 1)
+		lastRenderingType = 1;
 }
 
-void dsp3D_present(void)
+__inline void dsp3D_present(void)
 {
-	if(lastRenderingType != 0)
-	{
-		dsp3D_LL_switchScreen();
-		dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
-		if(lastRenderingType == 2)
-		{
-			dsp3D_LL_clearDepthBuffer();
-		}
-		
-		lastRenderingType = 0;
-	}
+	dsp3D_LL_switchScreen();
+	dsp3D_LL_clearScreen(LCD_COLOR_BLACK);
+	
+	if(lastRenderingType == 2)
+		dsp3D_LL_clearDepthBuffer();
+
+	lastRenderingType = 0;
 }
 
 void dsp3D_generateMatrices(void)
