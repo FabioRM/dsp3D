@@ -42,7 +42,7 @@ The dsp3D_ll provides low level interface to the hardware.
 Customize thw following to your needs
 ******************************************************************************/
 
-#include "dsp3d_ll.h"
+#include "dsp3D_LL.h"
 
 #undef SCREEN_WIDTH
 #define SCREEN_WIDTH 			(320)

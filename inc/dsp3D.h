@@ -55,7 +55,7 @@ Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 #ifndef __DSP3D_ENGINE__
 #define __DSP3D_ENGINE__
 
-#include "stm32f7xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include "float.h"
 #include "arm_math.h"
 #include "dsp3D_LL.h"
@@ -67,7 +67,7 @@ Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 #define SCREEN_ASPECT_RATIO		((float32_t)SCREEN_WIDTH / (float32_t)SCREEN_HEIGHT)
 
 #define color32_t	uint32_t
-
+	
 /**
  * @brief      Set the camera position in the world
  *
@@ -151,6 +151,13 @@ void dsp3D_renderPoints(void *meshPointer);
  * @brief      Plot the rendered mesh on the current screen
  */
 void dsp3D_present(void);
+
+/**
+ * @brief      Enable or disable backface culling
+ *
+ * @param      state  The desired state
+ */
+void dsp3D_setBackFaceCulling(uint8_t state);
 
 /**
  * @brief      Render a single vertex within the world

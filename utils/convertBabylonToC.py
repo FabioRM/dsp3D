@@ -113,6 +113,12 @@ for file in glob.glob('*.babylon'):
 		f_output.write(s);
 		s = '\t' + name + '.faces['+ str(index) + '][2] = ' + str(indices[index * 3 + 2]) + ';\n'
 		f_output.write(s);
+		s = '\t' + name + '.facesColor['+ str(index) + '][0] = 0xFF;\n'
+		f_output.write(s);
+		s = '\t' + name + '.facesColor['+ str(index) + '][1] = 0xFF;\n'
+		f_output.write(s);
+		s = '\t' + name + '.facesColor['+ str(index) + '][2] = 0xFF;\n'
+		f_output.write(s);
 
 	f_output.write('\n}\n')
 	f_output.close()

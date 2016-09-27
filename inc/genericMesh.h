@@ -63,6 +63,8 @@ typedef struct
 	float32_t vertices[MAX_VERTICES][3];
 	float32_t verticesNormal[MAX_VERTICES][3];
 	uint32_t faces[MAX_FACES][3];
+	uint32_t facesColor[MAX_FACES][3];
+
 } genericMesh;
 
 #endif

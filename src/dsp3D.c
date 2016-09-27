@@ -80,7 +80,7 @@ float32_t matrix_worldView[16] = 		{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 float32_t matrix_transform[16] = 		{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 float32_t matrix_transformhelper[16] = 	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-uint8_t lastRenderingType;
+uint8_t lastRenderingType, culling;
 
 arm_matrix_instance_f32 instance_matrix_view;
 arm_matrix_instance_f32 instance_matrix_rotation;
@@ -183,7 +183,8 @@ float32_t dsp3D_computeNDotL(float32_t *vertex, float32_t *normal, float32_t *li
 	dsp3D_vectorNorm(lightDirection, lightDirectionNorm);
 	arm_dot_prod_f32(normalNorm, lightDirectionNorm, 3, &dotProd);
 
-	return MAX(0.0, dotProd);
+	// the minus sign should not be here!
+	return MAX(0.0, -dotProd);
 }
 
 void dsp3D_vectorNormalTransform(float32_t *v, float32_t *m, float32_t *result)
@@ -474,9 +475,9 @@ void dsp3D_processScanLineGouraud(int32_t y, float32_t *ndotl, float32_t* pa, fl
     	g = (color >> 8);
     	b = (color);
     	
-    	r = (float32_t)r * ndl;
-    	g = (float32_t)g * ndl;
-    	b = (float32_t)b * ndl;
+    	r = (uint8_t)((float32_t)r * ndl);
+    	g = (uint8_t)((float32_t)g * ndl);
+    	b = (uint8_t)((float32_t)b * ndl);
 
     	dsp3D_drawPointDepthBuffer(x, y, z, ASSEMBLE_ARGB(a, r, g, b));
     }
@@ -515,7 +516,7 @@ void dsp3D_processScanLineFlat(int32_t y, float32_t ndotl, float32_t* pa, float3
     	r = (color >> 16);
     	g = (color >> 8);
     	b = (color);
-    	
+
     	r = (float32_t)r * ndotl;
     	g = (float32_t)g * ndotl;
     	b = (float32_t)b * ndotl;
@@ -679,7 +680,7 @@ void dsp3D_calculateFaceNormal(float32_t *a, float32_t *b, float32_t *c, float32
 
 void dsp3D_init(void)
 {
-	dsp3d_LL_init();
+	dsp3D_LL_init();
 	
 	arm_mat_init_f32(&instance_matrix_view, 4, 4, (float32_t *)matrix_view);
 	arm_mat_init_f32(&instance_matrix_rotation, 4, 4, (float32_t *)matrix_rotation);
@@ -693,12 +694,14 @@ void dsp3D_init(void)
 	dsp3D_generateMatrices();
 
 	lastRenderingType = 0;
+	culling = 0;
 }
 
 void dsp3D_renderGouraud(void* meshPointer)
 {
 	int32_t i;
 	int32_t a, b, c;
+	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t vertex_transform_a[9];
 	float32_t vertex_transform_b[9];
@@ -711,6 +714,11 @@ void dsp3D_renderGouraud(void* meshPointer)
 	float32_t vertex_norm_c[3];
 	float32_t face_norm[3];
 
+	float32_t camToPointVector[3];
+	float32_t faceNormalNormalized[3];
+	float32_t camToPointVectorNormalized[3];
+	float32_t cullingAngle;
+
 	dsp3D_generateMatrices();
 
 	genericMesh* mesh = (genericMesh*)meshPointer;
@@ -720,6 +728,10 @@ void dsp3D_renderGouraud(void* meshPointer)
 		a = mesh->faces[i][0];
 		b = mesh->faces[i][1];
 		c = mesh->faces[i][2];
+
+		RGBr = mesh->facesColor[i][0];
+		RGBg = mesh->facesColor[i][1];
+		RGBb = mesh->facesColor[i][2];
 
 		vertex_a[0] = mesh->vertices[a][0];
 		vertex_a[1] = mesh->vertices[a][1];
@@ -742,15 +754,22 @@ void dsp3D_renderGouraud(void* meshPointer)
 		vertex_norm_c[1] = mesh->verticesNormal[c][1];
 		vertex_norm_c[2] = mesh->verticesNormal[c][2];
 
-		dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
+		if(culling != 0)
+		{
+			dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
+			arm_sub_f32(cameraPosition, vertex_a, camToPointVector, 3);
+			dsp3D_vectorNorm(face_norm, faceNormalNormalized);
+			dsp3D_vectorNorm(camToPointVector, camToPointVectorNormalized);
+			arm_dot_prod_f32(faceNormalNormalized, camToPointVectorNormalized, 3, &cullingAngle);
+		}
 
-		if(face_norm[2] < 0)
+		if((culling == 0) || (cullingAngle < 0))
 		{
 			dsp3D_projectVertexComplete(vertex_a, vertex_norm_a, vertex_transform_a);
 			dsp3D_projectVertexComplete(vertex_b, vertex_norm_b, vertex_transform_b);
 			dsp3D_projectVertexComplete(vertex_c, vertex_norm_c, vertex_transform_c);
 
-			dsp3D_drawFaceGouraud(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
+			dsp3D_drawFaceGouraud(vertex_transform_a, vertex_transform_b, vertex_transform_c, ASSEMBLE_ARGB(0xFF, RGBr, RGBg, RGBb));
 		}
 	}
 
@@ -762,6 +781,7 @@ void dsp3D_renderFlat(void* meshPointer)
 {
 	int32_t i;
 	int32_t a, b, c;
+	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t vertex_transform_a[9];
 	float32_t vertex_transform_b[9];
@@ -774,6 +794,11 @@ void dsp3D_renderFlat(void* meshPointer)
 	float32_t vertex_norm_c[3];
 	float32_t face_norm[3];
 
+	float32_t camToPointVector[3];
+	float32_t faceNormalNormalized[3];
+	float32_t camToPointVectorNormalized[3];
+	float32_t cullingAngle;
+
 	dsp3D_generateMatrices();
 
 	genericMesh* mesh = (genericMesh*)meshPointer;
@@ -783,6 +808,10 @@ void dsp3D_renderFlat(void* meshPointer)
 		a = mesh->faces[i][0];
 		b = mesh->faces[i][1];
 		c = mesh->faces[i][2];
+
+		RGBr = mesh->facesColor[i][0];
+		RGBg = mesh->facesColor[i][1];
+		RGBb = mesh->facesColor[i][2];
 
 		vertex_a[0] = mesh->vertices[a][0];
 		vertex_a[1] = mesh->vertices[a][1];
@@ -805,15 +834,22 @@ void dsp3D_renderFlat(void* meshPointer)
 		vertex_norm_c[1] = mesh->verticesNormal[c][1];
 		vertex_norm_c[2] = mesh->verticesNormal[c][2];
 
-		dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
+		if(culling != 0)
+		{
+			dsp3D_calculateFaceNormal(vertex_norm_a, vertex_norm_b, vertex_norm_c, matrix_worldView, face_norm);
+			arm_sub_f32(cameraPosition, vertex_a, camToPointVector, 3);
+			dsp3D_vectorNorm(face_norm, faceNormalNormalized);
+			dsp3D_vectorNorm(camToPointVector, camToPointVectorNormalized);
+			arm_dot_prod_f32(faceNormalNormalized, camToPointVectorNormalized, 3, &cullingAngle);
+		}
 
-		if(face_norm[2] < 0)
+		if((culling == 0) || (cullingAngle < 0))
 		{
 			dsp3D_projectVertexComplete(vertex_a, vertex_norm_a, vertex_transform_a);
 			dsp3D_projectVertexComplete(vertex_b, vertex_norm_b, vertex_transform_b);
 			dsp3D_projectVertexComplete(vertex_c, vertex_norm_c, vertex_transform_c);
 
-			dsp3D_drawFaceFlat(vertex_transform_a, vertex_transform_b, vertex_transform_c, LCD_COLOR_WHITE);
+			dsp3D_drawFaceFlat(vertex_transform_a, vertex_transform_b, vertex_transform_c, ASSEMBLE_ARGB(0xFF, RGBr, RGBg, RGBb));
 		}
 	}
 
@@ -825,6 +861,7 @@ void dsp3D_renderWireframe(void* meshPointer)
 {
 	int32_t i;
 	int32_t a, b, c;
+	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t coord_a[4];
 	float32_t coord_b[4];
@@ -842,6 +879,10 @@ void dsp3D_renderWireframe(void* meshPointer)
 		a = mesh->faces[i][0];
 		b = mesh->faces[i][1];
 		c = mesh->faces[i][2];
+
+		RGBr = mesh->facesColor[i][0];
+		RGBg = mesh->facesColor[i][1];
+		RGBb = mesh->facesColor[i][2];
 
 		vertex_a[0] = mesh->vertices[a][0];
 		vertex_a[1] = mesh->vertices[a][1];
@@ -862,9 +903,9 @@ void dsp3D_renderWireframe(void* meshPointer)
 		dsp3D_projectVertex(vertex_b, coord_b);
 		dsp3D_projectVertex(vertex_c, coord_c);
 
-		dsp3D_drawLine(coord_a[0], coord_a[1], coord_b[0], coord_b[1], LCD_COLOR_WHITE);
-		dsp3D_drawLine(coord_b[0], coord_b[1], coord_c[0], coord_c[1], LCD_COLOR_WHITE);
-		dsp3D_drawLine(coord_c[0], coord_c[1], coord_a[0], coord_a[1], LCD_COLOR_WHITE);
+		dsp3D_drawLine(coord_a[0], coord_a[1], coord_b[0], coord_b[1], ASSEMBLE_ARGB(0xFF, RGBr, RGBg, RGBb));
+		dsp3D_drawLine(coord_b[0], coord_b[1], coord_c[0], coord_c[1], ASSEMBLE_ARGB(0xFF, RGBr, RGBg, RGBb));
+		dsp3D_drawLine(coord_c[0], coord_c[1], coord_a[0], coord_a[1], ASSEMBLE_ARGB(0xFF, RGBr, RGBg, RGBb));
 	}
 
 	if(lastRenderingType < 1)
@@ -912,6 +953,11 @@ void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
 	
 	if(lastRenderingType < 1)
 		lastRenderingType = 1;
+}
+
+void dsp3D_setBackFaceCulling(uint8_t state)
+{
+	culling = state;
 }
 
 __inline void dsp3D_present(void)
