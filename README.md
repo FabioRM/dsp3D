@@ -28,5 +28,7 @@ The engine were successfully tested on:
 
 I made two demos to see on YouTube:
 
-[dsp3D - A powerful 3D rendering engine](https://www.youtube.com/watch?v=GNKWmLiMpuk)
+[dsp3D - A power 3D rendering engine with hardware acceleration](https://www.youtube.com/watch?v=GNKWmLiMpuk)
+
+[dsp3D - A power 3D rendering engine with hardware acceleration (multi demo)](https://www.youtube.com/watch?v=HqQ-ebsyalM)
 
