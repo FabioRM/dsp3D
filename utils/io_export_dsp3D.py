@@ -1,3 +1,37 @@
+"""Copyright (c) 2016 - Fabio Angeletti
+e-mail: fabio.angeletti89@gmail.com
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of dsp3D nor the names of its contributors may be used
+  to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+This work was inspired by the excellent tutorial series by David Rousset:
+"learning how to write a 3D soft engine from scratch in C#, TypeScript
+or JavaScript" - available on David's website https://www.davrous.com
+"""
+
 bl_info = {
 	"name": "dsp3D model",
 	"author": "Fabio Angeletti",
@@ -40,7 +74,6 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 	bl_label = "Export dsp3D model"
 
 	filename_ext = ".c"
-	filename_exth = ".h"
 	filepath = ""
 	
 	# global_scale = FloatProperty(name="Scale", min=0.01, max=1000.0, default=1.0)
@@ -56,23 +89,6 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 		bm.to_mesh(mesh)
 		mesh.calc_tessface()
 		bm.free()
-
-	def write_vertex(file_handler, name, number, array):
-		file_handler.write("\t" + name + ".vertices[" + str(number) + "][0] = %.4f;\r\n" % array[0])
-		file_handler.write("\t" + name + ".vertices[" + str(number) + "][1] = %.4f;\r\n" % array[1])
-		file_handler.write("\t" + name + ".vertices[" + str(number) + "][2] = %.4f;\r\n" % array[2])
-		file_handler.write("\t" + name + ".verticesNormal[" + str(number) + "][0] = %.4f;\r\n" % array[3])
-		file_handler.write("\t" + name + ".verticesNormal[" + str(number) + "][1] = %.4f;\r\n" % array[4])
-		file_handler.write("\t" + name + ".verticesNormal[" + str(number) + "][2] = %.4f;\r\n" % array[5])
-
-	def write_face(file_handler, name, number, array):
-		file_handler.write("\t" + name + ".faces[" + str(number) + "][0] = %d;\r\n" % array[0])
-		file_handler.write("\t" + name + ".faces[" + str(number) + "][1] = %d;\r\n" % array[1])
-		file_handler.write("\t" + name + ".faces[" + str(number) + "][2] = %d;\r\n" % array[2])
-		file_handler.write("\t" + name + ".facesColor[" + str(number) + "][0] = %d;\r\n" % array[3])
-		file_handler.write("\t" + name + ".facesColor[" + str(number) + "][1] = %d;\r\n" % array[4])
-		file_handler.write("\t" + name + ".facesColor[" + str(number) + "][2] = %d;\r\n" % array[5])
-
 
 	def export_mesh(object, scene, file_handler, fileName):
 		materialsDict = dict()
@@ -105,9 +121,8 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 		verticesCount = len(mesh.vertices)
 		facesCount = len(mesh.tessfaces)
 
-		file_handler.write('\t' + fileName + '.numVert = ' + str(verticesCount) + ';\n')
-		file_handler.write('\t' + fileName + '.numFaces = ' + str(facesCount) + ';\n\n')
-		
+		file_handler.write(str(verticesCount) + ', ' + str(facesCount) + ', ')
+
 		materialIndex = 0
 		verticesIndex = 0
 		facesIndex = 0
@@ -147,13 +162,12 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 				facesIndex = facesIndex + 1
 
 		for i in verticesDict:
-			Export_CModel.write_vertex(file_handler,fileName,i,verticesDict[i])
+			for j in range(6):
+				file_handler.write('%.4f, ' % verticesDict[i][j])
 
 		for i in facesDict:
-			Export_CModel.write_face(file_handler,fileName,i,facesDict[i])
-
-		file_handler.write('\n}\n\n')
-		
+			for j in range(6):
+				file_handler.write('%.4f, ' % facesDict[i][j])
 
 	def save(operator, context, filepath="",
 		use_apply_modifiers=False,
@@ -165,15 +179,17 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 		fileName = os.path.basename(filepath).split('.')[0]
 
 		retStr = ""
-
-		retStr = retStr + '#include \"' + fileName + '.h\"\n\n'
-		retStr = retStr + 'genericMesh ' + fileName + ';\n\n'
-		retStr = retStr + 'void init' + fileName.title() + '(void)\n{\n'
+		retStr = retStr + '#ifndef __' + fileName.upper() + '_C__\n'
+		retStr = retStr + '#define __' + fileName.upper() + '_C__\n\n'
+		retStr = retStr + '#include "stdint.h"\n'
+		retStr = retStr + '#define float32_t float\n\n'
+		retStr = retStr + 'float32_t ' + fileName + 'ModelData[] = {'
 		
 		file_handler.write(retStr)
 
 		if bpy.ops.object.mode_set.poll():
 			bpy.ops.object.mode_set(mode='OBJECT')		
+			bpy.ops.object.origin_set(type='ORIGIN_CURSOR')  
 
 		# Writing scene
 		scene=context.scene
@@ -189,20 +205,10 @@ class Export_CModel(bpy.types.Operator, ExportHelper):
 			if (object.type == 'MESH'):
 				Export_CModel.export_mesh(object, scene, file_handler, fileName)
 		
+		file_handler.write(' };\n\n#endif\n')
+
 		# Closing file
 		file_handler.close()
-
-		# Write header file
-		file_handler = open(filepath.replace('.c', '.h'), 'w')
-		retStr = ""
-		retStr = retStr + '#ifndef __' + fileName.upper() + '_H__\n'
-		retStr = retStr + '#define __' + fileName.upper() + '_H__\n\n'
-		retStr = retStr + '#include "dsp3D.h"\n'
-		retStr = retStr + '#include "genericMesh.h"\n\n'
-		retStr = retStr + 'void init' + fileName.title() + '(void);\n\n'
-		retStr = retStr + '#endif\n'
-		file_handler.write(retStr)
-		file_handler.close()	
 		
 		return {'FINISHED'}
 
@@ -248,7 +254,7 @@ class ObjectPanel(bpy.types.Panel):
 ### REGISTER ###
 
 def menu_func(self, context):
-	self.layout.operator(Export_CModel.bl_idname, text="dsp3D model (.c .h)")
+	self.layout.operator(Export_CModel.bl_idname, text="dsp3D model (.c)")
 
 def register():
 	bpy.utils.register_module(__name__)
