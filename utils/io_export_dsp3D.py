@@ -1,4 +1,5 @@
-"""Copyright (c) 2016 - Fabio Angeletti
+"""
+Copyright (c) 2016 - Fabio Angeletti
 e-mail: fabio.angeletti89@gmail.com
 All rights reserved.
 
