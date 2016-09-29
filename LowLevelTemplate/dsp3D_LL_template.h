@@ -41,10 +41,18 @@ The dsp3D_ll provides low level interface to the hardware.
 #ifndef __DSP3D_LL_ENGINE__
 #define __DSP3D_LL_ENGINE__
 
-#include "main.h"
+#include "float.h"
+#include "arm_math.h"
 
-#define SCREEN_WIDTH 			(800)
-#define SCREEN_HEIGHT			(480)
+#ifndef SCREEN_WIDTH
+#define SCREEN_WIDTH 			(320)
+#endif
+
+#ifndef SCREEN_HEIGHT
+#define SCREEN_HEIGHT			(240)
+#endif
+
+#define color32_t uint32_t
 
 /**
  * @brief      Initialize low level

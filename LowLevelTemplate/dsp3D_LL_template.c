@@ -44,12 +44,6 @@ Customize thw following to your needs
 
 #include "dsp3D_LL.h"
 
-#undef SCREEN_WIDTH
-#define SCREEN_WIDTH 			(320)
-
-#undef SCREEN_HEIGHT
-#define SCREEN_HEIGHT			(240)
-
 static __IO uint32_t LCD_ActiveLayer = 1;
 static __IO uint32_t maxX = 0;
 static __IO uint32_t maxY = 0;

@@ -55,18 +55,12 @@ Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 #ifndef __DSP3D_ENGINE__
 #define __DSP3D_ENGINE__
 
-#include "stm32f4xx_hal.h"
-#include "float.h"
-#include "arm_math.h"
 #include "dsp3D_LL.h"
-#include "genericMesh.h"
+
+#include "stdint.h"
+#include "arm_math.h"
 
 /* defines -----------------------------------------------------------------*/
-#define ASSEMBLE_ARGB(A,R,G,B) (A << 24 | R << 16 | G << 8 | B)
-
-#define SCREEN_ASPECT_RATIO		((float32_t)SCREEN_WIDTH / (float32_t)SCREEN_HEIGHT)
-
-#define color32_t	uint32_t
 	
 /**
  * @brief      Set the camera position in the world
@@ -124,28 +118,28 @@ void dsp3D_init(void);
  *
  * @param      meshPointer  The mesh pointer
  */
-void dsp3D_renderGouraud(void *meshPointer);
+void dsp3D_renderGouraud(float32_t * dsp3dModel);
 
 /**
  * @brief      Render the mesh as flat surfaces
  *
  * @param      meshPointer  The mesh pointer
  */
-void dsp3D_renderFlat(void *meshPointer);
+void dsp3D_renderFlat(float32_t * dsp3dModel);
 
 /**
  * @brief      Render the mesh as wireframe
  *
  * @param      meshPointer  The mesh pointer
  */
-void dsp3D_renderWireframe(void *meshPointer);
+void dsp3D_renderWireframe(float32_t * dsp3dModel);
 
 /**
  * @brief      Render only the vertices of the mesh
  *
  * @param      meshPointer  The mesh pointer
  */
-void dsp3D_renderPoints(void *meshPointer);
+void dsp3D_renderPoints(float32_t * dsp3dModel);
 
 /**
  * @brief      Plot the rendered mesh on the current screen
@@ -157,7 +151,7 @@ void dsp3D_present(void);
  *
  * @param      state  The desired state
  */
-void dsp3D_setBackFaceCulling(uint8_t state);
+void dsp3D_setBackFaceCulling(uint32_t state);
 
 /**
  * @brief      Render a single vertex within the world

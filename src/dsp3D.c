@@ -54,6 +54,9 @@ Tested on ST's 32F746-Discovery board and ST's 32F769-Discovery board
 
 #include "dsp3D.h"
 
+#define ASSEMBLE_ARGB(A,R,G,B) (A << 24 | R << 16 | G << 8 | B)
+#define SCREEN_ASPECT_RATIO		((float32_t)SCREEN_WIDTH / (float32_t)SCREEN_HEIGHT)
+
 #define ABS(x)   		((x) > 0 ? (x) : -(x))
 #define MIN(x, y)		((x) > (y) ? (y) : (x))
 #define MAX(x, y)		((x) < (y) ? (y) : (x))
@@ -697,10 +700,11 @@ void dsp3D_init(void)
 	culling = 0;
 }
 
-void dsp3D_renderGouraud(void* meshPointer)
+void dsp3D_renderGouraud(float32_t * dsp3dModel)
 {
-	int32_t i;
-	int32_t a, b, c;
+	uint32_t i;
+	uint32_t a, b, c;
+	uint32_t numVert, numFaces;
 	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t vertex_transform_a[9];
@@ -721,38 +725,39 @@ void dsp3D_renderGouraud(void* meshPointer)
 
 	dsp3D_generateMatrices();
 
-	genericMesh* mesh = (genericMesh*)meshPointer;
+	numVert = dsp3dModel[0];
+	numFaces = dsp3dModel[1];
 
-	for(i = 0; i < mesh->numFaces; i++)
+	for(i = 0; i < numFaces; i++)
 	{
-		a = mesh->faces[i][0];
-		b = mesh->faces[i][1];
-		c = mesh->faces[i][2];
+		a = dsp3dModel[2 + numVert * 6 + i * 6 + 0];
+		b = dsp3dModel[2 + numVert * 6 + i * 6 + 1];
+		c = dsp3dModel[2 + numVert * 6 + i * 6 + 2];
 
-		RGBr = mesh->facesColor[i][0];
-		RGBg = mesh->facesColor[i][1];
-		RGBb = mesh->facesColor[i][2];
+		RGBr = dsp3dModel[2 + numVert * 6 + i * 6 + 3];
+		RGBg = dsp3dModel[2 + numVert * 6 + i * 6 + 4];
+		RGBb = dsp3dModel[2 + numVert * 6 + i * 6 + 5];
 
-		vertex_a[0] = mesh->vertices[a][0];
-		vertex_a[1] = mesh->vertices[a][1];
-		vertex_a[2] = mesh->vertices[a][2];
-		vertex_norm_a[0] = mesh->verticesNormal[a][0];
-		vertex_norm_a[1] = mesh->verticesNormal[a][1];
-		vertex_norm_a[2] = mesh->verticesNormal[a][2];
+		vertex_a[0] = dsp3dModel[2 + a * 6 + 0];
+		vertex_a[1] = dsp3dModel[2 + a * 6 + 1];
+		vertex_a[2] = dsp3dModel[2 + a * 6 + 2];
+		vertex_norm_a[0] = dsp3dModel[2 + a * 6 + 3];
+		vertex_norm_a[1] = dsp3dModel[2 + a * 6 + 4];
+		vertex_norm_a[2] = dsp3dModel[2 + a * 6 + 5];
 
-		vertex_b[0] = mesh->vertices[b][0];
-		vertex_b[1] = mesh->vertices[b][1];
-		vertex_b[2] = mesh->vertices[b][2];
-		vertex_norm_b[0] = mesh->verticesNormal[b][0];
-		vertex_norm_b[1] = mesh->verticesNormal[b][1];
-		vertex_norm_b[2] = mesh->verticesNormal[b][2];
+		vertex_b[0] = dsp3dModel[2 + b * 6 + 0];
+		vertex_b[1] = dsp3dModel[2 + b * 6 + 1];
+		vertex_b[2] = dsp3dModel[2 + b * 6 + 2];
+		vertex_norm_b[0] = dsp3dModel[2 + b * 6 + 3];
+		vertex_norm_b[1] = dsp3dModel[2 + b * 6 + 4];
+		vertex_norm_b[2] = dsp3dModel[2 + b * 6 + 5];
 
-		vertex_c[0] = mesh->vertices[c][0];
-		vertex_c[1] = mesh->vertices[c][1];
-		vertex_c[2] = mesh->vertices[c][2];
-		vertex_norm_c[0] = mesh->verticesNormal[c][0];
-		vertex_norm_c[1] = mesh->verticesNormal[c][1];
-		vertex_norm_c[2] = mesh->verticesNormal[c][2];
+		vertex_c[0] = dsp3dModel[2 + c * 6 + 0];
+		vertex_c[1] = dsp3dModel[2 + c * 6 + 1];
+		vertex_c[2] = dsp3dModel[2 + c * 6 + 2];
+		vertex_norm_c[0] = dsp3dModel[2 + c * 6 + 3];
+		vertex_norm_c[1] = dsp3dModel[2 + c * 6 + 4];
+		vertex_norm_c[2] = dsp3dModel[2 + c * 6 + 5];
 
 		if(culling != 0)
 		{
@@ -777,10 +782,11 @@ void dsp3D_renderGouraud(void* meshPointer)
 		lastRenderingType = 2;
 }
 
-void dsp3D_renderFlat(void* meshPointer)
+void dsp3D_renderFlat(float32_t * dsp3dModel)
 {
-	int32_t i;
-	int32_t a, b, c;
+	uint32_t i;
+	uint32_t a, b, c;
+	uint32_t numVert, numFaces;
 	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t vertex_transform_a[9];
@@ -801,38 +807,39 @@ void dsp3D_renderFlat(void* meshPointer)
 
 	dsp3D_generateMatrices();
 
-	genericMesh* mesh = (genericMesh*)meshPointer;
+	numVert = dsp3dModel[0];
+	numFaces = dsp3dModel[1];
 
-	for(i = 0; i < mesh->numFaces; i++)
+	for(i = 0; i < numFaces; i++)
 	{
-		a = mesh->faces[i][0];
-		b = mesh->faces[i][1];
-		c = mesh->faces[i][2];
+		a = dsp3dModel[2 + numVert * 6 + i * 6 + 0];
+		b = dsp3dModel[2 + numVert * 6 + i * 6 + 1];
+		c = dsp3dModel[2 + numVert * 6 + i * 6 + 2];
 
-		RGBr = mesh->facesColor[i][0];
-		RGBg = mesh->facesColor[i][1];
-		RGBb = mesh->facesColor[i][2];
+		RGBr = dsp3dModel[2 + numVert * 6 + i * 6 + 3];
+		RGBg = dsp3dModel[2 + numVert * 6 + i * 6 + 4];
+		RGBb = dsp3dModel[2 + numVert * 6 + i * 6 + 5];
 
-		vertex_a[0] = mesh->vertices[a][0];
-		vertex_a[1] = mesh->vertices[a][1];
-		vertex_a[2] = mesh->vertices[a][2];
-		vertex_norm_a[0] = mesh->verticesNormal[a][0];
-		vertex_norm_a[1] = mesh->verticesNormal[a][1];
-		vertex_norm_a[2] = mesh->verticesNormal[a][2];
+		vertex_a[0] = dsp3dModel[2 + a * 6 + 0];
+		vertex_a[1] = dsp3dModel[2 + a * 6 + 1];
+		vertex_a[2] = dsp3dModel[2 + a * 6 + 2];
+		vertex_norm_a[0] = dsp3dModel[2 + a * 6 + 3];
+		vertex_norm_a[1] = dsp3dModel[2 + a * 6 + 4];
+		vertex_norm_a[2] = dsp3dModel[2 + a * 6 + 5];
 
-		vertex_b[0] = mesh->vertices[b][0];
-		vertex_b[1] = mesh->vertices[b][1];
-		vertex_b[2] = mesh->vertices[b][2];
-		vertex_norm_b[0] = mesh->verticesNormal[b][0];
-		vertex_norm_b[1] = mesh->verticesNormal[b][1];
-		vertex_norm_b[2] = mesh->verticesNormal[b][2];
+		vertex_b[0] = dsp3dModel[2 + b * 6 + 0];
+		vertex_b[1] = dsp3dModel[2 + b * 6 + 1];
+		vertex_b[2] = dsp3dModel[2 + b * 6 + 2];
+		vertex_norm_b[0] = dsp3dModel[2 + b * 6 + 3];
+		vertex_norm_b[1] = dsp3dModel[2 + b * 6 + 4];
+		vertex_norm_b[2] = dsp3dModel[2 + b * 6 + 5];
 
-		vertex_c[0] = mesh->vertices[c][0];
-		vertex_c[1] = mesh->vertices[c][1];
-		vertex_c[2] = mesh->vertices[c][2];
-		vertex_norm_c[0] = mesh->verticesNormal[c][0];
-		vertex_norm_c[1] = mesh->verticesNormal[c][1];
-		vertex_norm_c[2] = mesh->verticesNormal[c][2];
+		vertex_c[0] = dsp3dModel[2 + c * 6 + 0];
+		vertex_c[1] = dsp3dModel[2 + c * 6 + 1];
+		vertex_c[2] = dsp3dModel[2 + c * 6 + 2];
+		vertex_norm_c[0] = dsp3dModel[2 + c * 6 + 3];
+		vertex_norm_c[1] = dsp3dModel[2 + c * 6 + 4];
+		vertex_norm_c[2] = dsp3dModel[2 + c * 6 + 5];
 
 		if(culling != 0)
 		{
@@ -857,10 +864,11 @@ void dsp3D_renderFlat(void* meshPointer)
 		lastRenderingType = 2;
 }
 
-void dsp3D_renderWireframe(void* meshPointer)
+void dsp3D_renderWireframe(float32_t * dsp3dModel)
 {
-	int32_t i;
-	int32_t a, b, c;
+	uint32_t i;
+	uint32_t a, b, c;
+	uint32_t numVert, numFaces;
 	uint8_t RGBr, RGBg, RGBb;
 	
 	float32_t coord_a[4];
@@ -872,31 +880,30 @@ void dsp3D_renderWireframe(void* meshPointer)
 
 	dsp3D_generateMatrices();
 
-	genericMesh* mesh = (genericMesh*)meshPointer;
+	numVert = dsp3dModel[0];
+	numFaces = dsp3dModel[1];
 
-	for(i = 0; i < mesh->numFaces; i++)
+	for(i = 0; i < numFaces; i++)
 	{
-		a = mesh->faces[i][0];
-		b = mesh->faces[i][1];
-		c = mesh->faces[i][2];
+		a = dsp3dModel[2 + numVert * 6 + i * 6 + 0];
+		b = dsp3dModel[2 + numVert * 6 + i * 6 + 1];
+		c = dsp3dModel[2 + numVert * 6 + i * 6 + 2];
 
-		RGBr = mesh->facesColor[i][0];
-		RGBg = mesh->facesColor[i][1];
-		RGBb = mesh->facesColor[i][2];
+		RGBr = dsp3dModel[2 + numVert * 6 + i * 6 + 3];
+		RGBg = dsp3dModel[2 + numVert * 6 + i * 6 + 4];
+		RGBb = dsp3dModel[2 + numVert * 6 + i * 6 + 5];
 
-		vertex_a[0] = mesh->vertices[a][0];
-		vertex_a[1] = mesh->vertices[a][1];
-		vertex_a[2] = mesh->vertices[a][2];
-		vertex_a[3] = 0.0; 
+		vertex_a[0] = dsp3dModel[2 + a * 6 + 0];
+		vertex_a[1] = dsp3dModel[2 + a * 6 + 1];
+		vertex_a[2] = dsp3dModel[2 + a * 6 + 2];
 
-		vertex_b[0] = mesh->vertices[b][0];
-		vertex_b[1] = mesh->vertices[b][1];
-		vertex_b[2] = mesh->vertices[b][2];
-		vertex_b[3] = 0.0;
+		vertex_b[0] = dsp3dModel[2 + b * 6 + 0];
+		vertex_b[1] = dsp3dModel[2 + b * 6 + 1];
+		vertex_b[2] = dsp3dModel[2 + b * 6 + 2];
 
-		vertex_c[0] = mesh->vertices[c][0];
-		vertex_c[1] = mesh->vertices[c][1];
-		vertex_c[2] = mesh->vertices[c][2];
+		vertex_c[0] = dsp3dModel[2 + c * 6 + 0];
+		vertex_c[1] = dsp3dModel[2 + c * 6 + 1];
+		vertex_c[2] = dsp3dModel[2 + c * 6 + 2];
 		vertex_c[3] = 0.0;
 
 		dsp3D_projectVertex(vertex_a, coord_a);
@@ -912,22 +919,23 @@ void dsp3D_renderWireframe(void* meshPointer)
 		lastRenderingType = 1;
 }
 
-void dsp3D_renderPoints(void* meshPointer)
+void dsp3D_renderPoints(float32_t * dsp3dModel)
 {
-	int32_t i;
+	uint32_t i;
+	uint32_t numVert;
 	
 	float32_t coord[3];
 	float32_t vertex[3];
 
 	dsp3D_generateMatrices();
+	
+	numVert = dsp3dModel[0];
 
-	genericMesh* mesh = (genericMesh*)meshPointer;
-
-	for(i = 0; i < mesh->numVert; i++)
+	for(i = 0; i < numVert; i++)
 	{
-		vertex[0] = mesh->vertices[i][0];
-		vertex[1] = mesh->vertices[i][1];
-		vertex[2] = mesh->vertices[i][2];
+		vertex[0] = dsp3dModel[2 + i * 6 + 0];
+		vertex[1] = dsp3dModel[2 + i * 6 + 1];
+		vertex[2] = dsp3dModel[2 + i * 6 + 2];
 
 		dsp3D_projectVertex(vertex, coord);
 
@@ -955,7 +963,7 @@ void dsp3D_renderPoint(float32_t x, float32_t y, float32_t z)
 		lastRenderingType = 1;
 }
 
-void dsp3D_setBackFaceCulling(uint8_t state)
+void dsp3D_setBackFaceCulling(uint32_t state)
 {
 	culling = state;
 }
