@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "vertices": 521,
+  "triangles": 188,
+  "bytes": 19944,
+  "compact": false,
+  "materials": [],
+  "textures": 0,
+  "joints": 0,
+  "bounds": [
+    [
+      -1.0,
+      -0.9003805,
+      -0.9491998
+    ],
+    [
+      1.0,
+      0.9003805,
+      0.9491998
+    ]
+  ]
+}

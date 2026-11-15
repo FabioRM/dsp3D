@@ -10,11 +10,15 @@ try {
     if(!(Test-Path $gcc) -or !(Test-Path $python)){throw 'Local native compiler or Python missing. See tools/README.md.'}
     New-Item -ItemType Directory -Force build/native | Out-Null
     $flags=@('-std=c11','-O3','-g','-Wall','-Wextra','-Wpedantic','-Werror','-ffp-contract=fast','-fno-strict-aliasing','-UNDEBUG','-Iinc','-Iassets/generated')
-    $core=@('src/dsp3D.c','src/dsp3D_model.c','src/dsp3D_geometry.c','src/dsp3D_math.c','src/dsp3D_material.c','src/dsp3D_scene.c','src/dsp3D_scene_io.c','assets/generated/metamask.c','assets/generated/suzanne.c')
+    $core=@('src/dsp3D.c','src/dsp3D_model.c','src/dsp3D_geometry.c','src/dsp3D_math.c','src/dsp3D_material.c','src/dsp3D_scene.c','src/dsp3D_scene_io.c','src/dsp3D_asset.c','assets/generated/metamask.c','assets/generated/suzanne.c')
     & $gcc @flags @core tests/test_renderer.c -lm -o build/native/tests.exe
     if($LASTEXITCODE){throw 'Native test compilation failed'}
     & build/native/tests.exe
     if($LASTEXITCODE){throw 'Native renderer tests failed'}
+    & $gcc @flags @core tests/test_asset.c -lm -o build/native/asset-tests.exe
+    if($LASTEXITCODE){throw 'Asset test compilation failed'}
+    & $python tests/test_assets.py
+    if($LASTEXITCODE){throw 'Extended asset tests failed'}
     & $python tests/test_converter.py
     if($LASTEXITCODE){throw 'Converter tests failed'}
     & $gcc @flags @core -Iexamples/scenes examples/desktop/preview.c examples/scenes/scenes.c -lm -o build/native/preview.exe
