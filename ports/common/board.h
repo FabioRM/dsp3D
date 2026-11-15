@@ -13,6 +13,7 @@
 #define BOARD_HEIGHT 480u
 #define BOARD_NAME "STM32F769I Discovery"
 #define BOARD_LTDC hltdc_discovery
+#define BOARD_BUTTON BUTTON_USER
 #else
 #include "stm32746g_discovery.h"
 #include "stm32746g_discovery_lcd.h"
@@ -23,6 +24,7 @@
 #define BOARD_HEIGHT 272u
 #define BOARD_NAME "STM32F746G Discovery"
 #define BOARD_LTDC hLtdcHandler
+#define BOARD_BUTTON BUTTON_KEY
 #endif
 #define BOARD_MAX_VERTICES 16384u
 #define BOARD_MODEL_BYTES (2u * 1024u * 1024u)

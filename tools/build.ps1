@@ -32,7 +32,8 @@ try {
     $sources=@('src/dsp3D.c','src/dsp3D_model.c','examples/viewer/main.c','ports/common/board.c','ports/common/sd_diskio.c','ports/common/syscalls.c','assets/generated/metamask.c','assets/generated/suzanne.c',"$fat/ff.c","$fat/option/ccsbcs.c","$device/Source/Templates/system_stm32f7xx.c","$device/Source/Templates/gcc/startup_$startup.s")
     foreach($unit in $halUnits){$sources+="$hal/Src/stm32f7xx_$unit.c"}
     foreach($suffix in @('','_lcd','_sdram','_ts','_sd')){$sources+="$bsp/$bspPrefix$suffix.c"}
-    $sources+="$sdk/Drivers/BSP/Components/ft5336/ft5336.c"
+    if($Board -eq 'f746'){$sources+="$sdk/Drivers/BSP/Components/ft5336/ft5336.c"}
+    else {$sources+="$sdk/Drivers/BSP/Components/ft6x06/ft6x06.c"}
     if($Board -eq 'f769'){foreach($part in @('otm8009a','nt35510','adv7533')){$sources+="$sdk/Drivers/BSP/Components/$part/$part.c"}}
     # Recompile when any project input changes. This favors correctness over a fragile header cache.
     $config=($flags -join "`n")

@@ -101,7 +101,22 @@ static void console_init(void) {
     console.Init.Mode = UART_MODE_TX_RX;
     console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     console.Init.OverSampling = UART_OVERSAMPLING_16;
+#ifdef BOARD_F769
+    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitTypeDef pins = {0};
+    pins.Pin = GPIO_PIN_9 | GPIO_PIN_10;
+    pins.Mode = GPIO_MODE_AF_PP;
+    pins.Pull = GPIO_PULLUP;
+    pins.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    pins.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOA, &pins);
+    console.Instance = USART1;
+    if (HAL_UART_Init(&console) != HAL_OK)
+        board_panic(4);
+#else
     BSP_COM_Init(COM1, &console);
+#endif
 }
 void board_log(const char *text) {
     HAL_UART_Transmit(&console, (uint8_t *)text, (uint16_t)strlen(text), 100);
@@ -119,7 +134,7 @@ void board_init(void) {
     BSP_LED_Init(LED1);
     clock_init();
     console_init();
-    BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_GPIO);
+    BSP_PB_Init(BOARD_BUTTON, BUTTON_MODE_GPIO);
     board_log("\r\ndsp3D " DSP3D_VERSION " / " BOARD_NAME " / 200 MHz\r\n");
     if (BSP_LCD_Init() != LCD_OK)
         board_panic(5);
