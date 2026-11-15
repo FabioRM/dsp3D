@@ -122,8 +122,13 @@ void board_log(const char *text) {
     HAL_UART_Transmit(&console, (uint8_t *)text, (uint16_t)strlen(text), 100);
 }
 int board_read_char(void) {
-    uint8_t ch;
-    return HAL_UART_Receive(&console, &ch, 1, 0) == HAL_OK ? ch : -1;
+    /* Debugger pauses and rendering may overrun the single-byte receive register.
+     * Clear ORE explicitly; zero-timeout HAL polling can leave it latched. */
+    if (__HAL_UART_GET_FLAG(&console, UART_FLAG_ORE))
+        __HAL_UART_CLEAR_OREFLAG(&console);
+    if (__HAL_UART_GET_FLAG(&console, UART_FLAG_RXNE))
+        return (int)(console.Instance->RDR & 255u);
+    return -1;
 }
 void board_init(void) {
     mpu_init();

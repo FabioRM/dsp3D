@@ -1,0 +1,9 @@
+record,backend,board,width,height,clock_hz,model,mode,frames,mean_render_us,min_render_us,max_render_us,mean_clear_us
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,metamask,Flat,120,6431,5916,7073,2668
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,metamask,Gouraud,120,8358,7576,9235,2647
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,metamask,Wireframe,120,3357,2844,3906,2656
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,metamask,Points,120,1045,1029,1053,2659
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,suzanne,Flat,120,7732,6316,9571,2457
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,suzanne,Gouraud,120,8555,7257,10282,2456
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,suzanne,Wireframe,120,7655,5494,10022,2463
+BENCH,scalar,STM32F746G Discovery,480,272,200000000,suzanne,Points,120,1088,1063,1103,2463

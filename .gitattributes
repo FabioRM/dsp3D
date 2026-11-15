@@ -6,7 +6,7 @@
 *.md text eol=lf
 *.ld text eol=lf
 *.cmake text eol=lf
-*.stl -text
+*.stl binary
 *.d3m -text
 *.a -text
 *.png -text

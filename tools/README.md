@@ -42,6 +42,8 @@ Run from the repository root:
 ./tools/test.ps1 -Benchmark
 ./tools/regenerate-assets.ps1
 ./tools/capture.ps1 -Board f746 -Output build/capture.bmp
+./tools/benchmark.ps1 -Port COM14 -Output build/f746/benchmark.csv
+./tools/check-relocation.ps1
 ```
 
 Build output includes `viewer.elf`, `.bin`, `.hex`, `.map`, and `libdsp3d.a`.
@@ -56,6 +58,11 @@ the DWT cycle counter. Allow 30 seconds when collecting serial output. Build
 with `-Scalar` and flash with `-Scalar` for the equivalent FPU scalar backend.
 
 `capture.ps1` pauses the CPU, reads the displayed RGB565 framebuffer through SWD,
-resumes execution, and writes a BMP. A capture takes several seconds and pauses
+resumes execution, and writes a BMP or PNG. A capture takes several seconds and pauses
 animation. The library also has an optional native CMake build; the PowerShell
 workflow does not require CMake or Ninja.
+
+`capture.ps1 -ResetView` is a viewer-specific debugging option: it reads the
+selected board ELF symbols, resets rotation/zoom in RAM, pauses autorotation,
+lets one frame present, and captures the result. It checks the MCU ID before
+writing viewer state. Normal captures only read the currently displayed frame.

@@ -5,7 +5,7 @@ $serial=[System.IO.Ports.SerialPort]::new($Port,115200,'None',8,'One')
 $serial.ReadTimeout=200
 try {
     $serial.Open()
-    if($Command){$serial.Write($Command)}
+    foreach($character in $Command.ToCharArray()){$serial.Write([string]$character);Start-Sleep -Milliseconds 60}
     $deadline=[DateTime]::UtcNow.AddSeconds($Seconds)
     while([DateTime]::UtcNow -lt $deadline){
         try {$serial.ReadLine()} catch [TimeoutException] {}

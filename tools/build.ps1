@@ -39,7 +39,7 @@ try {
     $config=($flags -join "`n")
     $signature=Join-Path $output 'flags.txt'
     $changed=$Rebuild -or !(Test-Path $signature) -or (Get-Content $signature -Raw) -ne $config
-    $headerTime=(Get-ChildItem inc,ports,assets/generated -Recurse -File | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
+    $headerTime=(Get-ChildItem inc,ports,assets/generated,"$sdk/Drivers",$fat -Recurse -File -Include *.h,*.inc | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
     $objects=@();$libraryObjects=@()
     foreach($source in $sources){
         if(!(Test-Path -LiteralPath $source)){throw "Source missing: $source"}
