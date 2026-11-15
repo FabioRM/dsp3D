@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include "dsp3D.h"
 #include "dsp3D_geometry.h"
+#include "dsp3D_math.h"
 #include "metamask.h"
 #include "suzanne.h"
 #include <assert.h>
@@ -238,9 +239,36 @@ static void test_geometry_utilities(void) {
         dsp3d_quality_update(&q, 1000);
     assert(q.divisor == 1);
 }
+static void test_camera_and_matrices(void) {
+    dsp3d_mat4 a = dsp3d_matrix_trs((dsp3d_vec3){1, 2, 3},
+                                    dsp3d_quat_euler((dsp3d_vec3){0.2f, 0.3f, 0.4f}),
+                                    (dsp3d_vec3){2, 3, 4}),
+               inverse;
+    assert(dsp3d_matrix_inverse(&a, &inverse) == DSP3D_OK);
+    dsp3d_mat4 product = dsp3d_matrix_multiply(&a, &inverse);
+    for (unsigned i = 0; i < 16; i++)
+        assert(fabsf(product.m[i] - (i % 5 == 0 ? 1.0f : 0.0f)) < 0.00001f);
+    init();
+    const dsp3d_vertex v[] = {
+        {{-1, -1, 0}, {0, 0, 1}}, {{1, -1, 0}, {0, 0, 1}}, {{0, 1, 0}, {0, 0, 1}}};
+    const dsp3d_triangle t[] = {{{0, 1, 2}, 0xffffff}};
+    const dsp3d_mesh mesh = {v, t, 3, 1};
+    dsp3d_hit hit;
+    dsp3d_mat4 world = dsp3d_identity();
+    assert(dsp3d_pick_mesh(&ctx.camera, (dsp3d_rect){0, 0, W, H}, W / 2, H / 2, &mesh, &world,
+                           &hit) == DSP3D_OK);
+    assert(hit.triangle == 0 && fabsf(hit.distance - 4) < 0.0001f);
+    dsp3d_orbit orbit = {{0, 0, 0}, 0, 0, 4};
+    dsp3d_orbit_apply(&orbit, &ctx.camera);
+    assert(ctx.camera.eye.z == 4);
+    dsp3d_vec3 before = ctx.camera.eye;
+    dsp3d_camera_pan(&ctx.camera, 1, 0);
+    assert(ctx.camera.eye.x == before.x + 1 && ctx.camera.target.x == 1);
+}
 int main(void) {
     test_viewport_stride_and_scale();
     test_geometry_utilities();
+    test_camera_and_matrices();
     test_models();
     test_depth_and_culling();
     test_clipping_and_normals();
