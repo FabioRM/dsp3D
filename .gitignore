@@ -1,0 +1,6 @@
+/build/
+/tools/local/
+__pycache__/
+*.pyc
+*.ppm
+/test-output/
