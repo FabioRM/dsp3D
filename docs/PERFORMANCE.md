@@ -38,11 +38,42 @@ avoids claiming that every CMSIS call is inherently faster.
 
 The interactive viewer was observed around 59 FPS on the attached LCD for the
 tested poses. Display synchronization and UI work affect frame rate; reciprocal
-render-only timings must not be advertised as interactive FPS. No F769 hardware
-performance is claimed: that project is compile/link verified only.
+render-only timings must not be advertised as interactive FPS.
 
 Raw final results, including per-case minima and maxima:
 [DSP](measurements/f746-dsp.csv), [scalar](measurements/f746-scalar.csv).
+
+## STM32F769I-Discovery hardware results
+
+The second board was subsequently flashed and verified through its onboard
+debugger converted to SEGGER J-Link. The owner confirmed both display and touch.
+The CPU runs at 200 MHz and the DSI LCD at its native 800 x 480 resolution.
+The benchmark uses the same library, models, 120 poses, lighting, scale and
+measurement boundaries described above, with `-mfpu=fpv5-d16`. Only the CMSIS/DSP
+backend was measured on this board.
+
+| Model | Mode | Mean render (us) | Mean clear (us) |
+| --- | --- | ---: | ---: |
+| Fox | Flat | 16,028 | 5,374 |
+| Fox | Gouraud | 18,419 | 5,361 |
+| Fox | Wireframe | 4,625 | 5,366 |
+| Fox | Points | 869 | 5,408 |
+| Suzanne | Flat | 14,286 | 5,026 |
+| Suzanne | Gouraud | 15,442 | 5,014 |
+| Suzanne | Wireframe | 9,840 | 5,009 |
+| Suzanne | Points | 921 | 5,042 |
+
+About 30 interactive FPS was observed for the fox at default zoom. Larger zoom
+levels cover more pixels and can reduce frame rate significantly. The F769
+display contains about 2.94 times as many pixels as the F746 display, so these
+native-resolution results are not a same-resolution MCU speed comparison.
+Full minimum/maximum data: [F769 DSP CSV](measurements/f769-dsp.csv).
+
+```powershell
+./tools/build.ps1 -Board f769
+./tools/flash.ps1 -Board f769 -Probe jlink
+./tools/benchmark.ps1 -Port COM15 -TimeoutSeconds 60 -Output build/f769/dsp.csv
+```
 
 ## Optimization progression
 

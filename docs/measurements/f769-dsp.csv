@@ -1,0 +1,9 @@
+record,backend,board,width,height,clock_hz,model,mode,frames,mean_render_us,min_render_us,max_render_us,mean_clear_us
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,metamask,Flat,120,16028,14782,17431,5374
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,metamask,Gouraud,120,18419,16792,20127,5361
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,metamask,Wireframe,120,4625,3930,5398,5366
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,metamask,Points,120,869,857,909,5408
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,suzanne,Flat,120,14286,12075,17079,5026
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,suzanne,Gouraud,120,15442,13289,18146,5014
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,suzanne,Wireframe,120,9840,7044,12923,5009
+BENCH,cmsis-dsp,STM32F769I Discovery,800,480,200000000,suzanne,Points,120,921,907,954,5042

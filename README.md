@@ -14,7 +14,7 @@ of the board. Applications provide memory and handle presentation.
 | Project | CPU | Display | Status |
 | --- | --- | --- | --- |
 | STM32F746G-Discovery | Cortex-M7, 200 MHz | 480 x 272 RGB LCD | Flashed and running; display and touch confirmed |
-| STM32F769I-Discovery | Cortex-M7, 200 MHz | 800 x 480 DSI LCD | Compiled and linked; physical board verification pending |
+| STM32F769I-Discovery | Cortex-M7, 200 MHz | 800 x 480 DSI LCD | Flashed and running through J-Link; display and touch confirmed |
 
 The touch viewer includes the MetaMask fox and Suzanne in flash, a read-only
 microSD model browser, drag rotation, pinch/button zoom, automatic rotation,
@@ -54,7 +54,6 @@ Render time excludes clearing, UI, serial logging, and presentation/vblank waits
 Clear time includes DMA2D color fill and dirty-region depth clearing. The
 interactive viewer was observed around **59 FPS in the tested poses**; render-only
 timings are not end-to-end FPS, and results vary with pose, zoom and scene size.
-F769 hardware performance has not been measured.
 
 The DSP backend reduces Gouraud render time by about **14% for the fox** and
 **8% for Suzanne** against the scalar build using the same assets. Other modes
@@ -62,6 +61,22 @@ are close. During v2 optimization, clearing fell from about **7.3 ms to 2.5-2.7 
 and Suzanne flat rendering from about **11.4 ms to 7.8 ms**. The latter includes
 switching to shared smooth normals; these are not comparisons with the original
 2016 renderer.
+
+The **STM32F769I-Discovery at 200 MHz and 800 x 480** has also been measured with
+the CMSIS/DSP backend, using the same assets and 120-pose benchmark. Mean timings
+are in **microseconds**; no F769 scalar comparison was collected.
+
+| Mode | Fox render | Fox clear | Suzanne render | Suzanne clear |
+| --- | ---: | ---: | ---: | ---: |
+| Flat | 16,028 | 5,374 | 14,286 | 5,026 |
+| Gouraud | 18,419 | 5,361 | 15,442 | 5,014 |
+| Wireframe | 4,625 | 5,366 | 9,840 | 5,009 |
+| Points | 869 | 5,408 | 921 | 5,042 |
+
+The F769 viewer was observed around **30 FPS with the fox at the default zoom**.
+These measurements use its native resolution, which has about 2.94 times as many
+pixels as the F746 display. See the [raw F769 results](docs/measurements/f769-dsp.csv)
+for pose-dependent minima and maxima.
 
 See the [full performance report](docs/PERFORMANCE.md) for methodology, optimization
 details and reproduction commands, and the raw [DSP](docs/measurements/f746-dsp.csv)
@@ -80,6 +95,9 @@ paths and make no network requests or references to an external STM32Cube instal
 ```
 
 For the second board, select `-Board f769` in the build and flash commands.
+For an onboard debugger converted to SEGGER J-Link, use
+`./tools/flash.ps1 -Board f769 -Probe jlink`; its serial console is COM15 on the
+verified workstation.
 Output is in `build/f746/` or `build/f769/`: `viewer.elf`, `viewer.bin`,
 `viewer.hex`, `viewer.map`, and the reusable `libdsp3d.a` archive.
 The flash script verifies the MCU identity before programming. The OpenOCD

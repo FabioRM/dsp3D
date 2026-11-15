@@ -27,8 +27,8 @@ The project language is English, including source, comments, tools, UI, and docu
 - Completed: portable C11 library, typed meshes, six-plane clipping, exact subpixel rasterization, DSP and scalar backends, checked binary loader, standalone STL converter and native tests.
 - Completed: local SDK/tool bundles, F746 firmware build/programming, SDRAM test, RGB565 double buffering, touch controls, embedded models, serial diagnostics and on-board DWT benchmarks. The owner confirmed that display and touch work.
 - Completed: read-only microSD browser and transactional loader. Host parser/CRC/error tests pass. No physical microSD is available; card/SDMMC testing is pending.
-- Completed: F769 200 MHz / 800 x 480 project compiles and links against the same library/viewer. No F769 is attached; hardware verification is pending.
+- Completed: F769 200 MHz / 800 x 480 project compiles and links against the same library/viewer. Subsequently flashed through its SEGGER J-Link interface; SDRAM, live rendering and serial controls verified, with display/touch confirmed by the owner. All eight DSP benchmark cases are recorded.
 - Completed: triangle/cube/multi-object examples, portable native preview/benchmark, framebuffer capture, English API/model/board/tool documentation, BSD copyright update and third-party/asset notices.
 - Completed: relocated builds in a path containing spaces, with PATH restricted to Windows System32; both firmware binaries match the original builds byte for byte. Native CMake build/test/install also passes.
 - Completed: final F746 DSP/scalar benchmarks, on-board absent-card recovery, actual LCD framebuffer captures, and UART overrun recovery after debugger pauses. Final firmware is running on the F746.
-- Delivery: progress commits on `codex/standalone-cortex-m-library`; publish that branch after the final documentation commit. Physical F769 and microSD tests remain explicitly pending because that hardware is unavailable.
+- Delivery: progress commits published on `codex/standalone-cortex-m-library`. Both boards are hardware verified. Physical microSD testing remains pending because no card is available.

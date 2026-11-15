@@ -17,7 +17,7 @@ in `ports/common/board.c` and each board's linker/configuration directory.
 | Touch component | FT5336 | FT6x06 family (BSP panel detection) |
 | Console | USART1 PA9/PB7 via BSP | USART1 PA9/PA10 |
 | User button | BUTTON_KEY | BUTTON_USER |
-| Verification | Compiled, flashed, display/touch confirmed by owner | Compiled and linked; board not attached |
+| Verification | Flashed, display/touch confirmed by owner | Flashed through J-Link, display/touch confirmed by owner |
 
 Both builds currently use the first 8 MiB of SDRAM, with a final reserved probe
 page. Layout is calculated and checked at startup: two color buffers, one float
@@ -43,8 +43,12 @@ FPU does not introduce double precision in the renderer's hot paths.
 
 Build with `./tools/build.ps1 -Board f769`, then flash that board with
 `./tools/flash.ps1 -Board f769`. The flash tool rejects the F746 device ID when
-F769 firmware is selected. F769 hardware behavior, display revisions and touch
-orientation must be verified on the physical second board.
+F769 firmware is selected. The attached F769 has its onboard debugger converted
+to SEGGER J-Link: program it with
+`./tools/flash.ps1 -Board f769 -Probe jlink` and use COM15 for its serial console.
+Its SDRAM, display, touch and running application have been verified; benchmark
+results are in `docs/PERFORMANCE.md`. Other display revisions may still need
+their own hardware validation.
 
 Hardware references: the checked-in BSP source and
 [ST UM2033](https://www.st.com.cn/resource/en/user_manual/um2033-discovery-kit-with-stm32f769ni-mcu-stmicroelectronics.pdf).

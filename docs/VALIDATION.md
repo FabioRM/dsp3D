@@ -35,15 +35,19 @@ Development and validation date: 15 November 2026 (Europe/Rome).
   recovery keeps commands working when the debugger pauses the receive loop.
 - Native CMake library installation checked: static archive and public header
   install successfully into an independent prefix.
+- F769 flash write/read-back verification through local CubeProgrammer and the
+  onboard SEGGER J-Link interface, MCU ID 0x451. Original 2 MiB flash backed up
+  locally in `build/original-f769-flash.bin` before programming.
+- F769 application start, SDRAM probe, frame presentation, both models and serial
+  controls verified on COM15. The owner confirmed that display and touch work.
+- All eight F769 CMSIS/DSP benchmark cases captured at 200 MHz / 800 x 480.
+  See [performance](PERFORMANCE.md) and the checked-in measurement CSV.
 
 ## Remaining physical checks
 
 - No microSD is available. SDMMC transfers, FAT32 enumeration/loading with a real
   card, removal/reinsertion and physical-media errors are implemented but have
   not been exercised on hardware. Host binary-loader checks do not replace this.
-- No STM32F769I-Discovery is attached. Its 200 MHz / 800 x 480 project is
-  compile/link verified; DSI panel revisions, touch orientation, SDRAM and live
-  performance require the physical second board.
 - The supplied Windows native GCC distribution does not include the sanitizer
   runtime/spec files, so an attempted UBSan build was unavailable. Guard-buffer,
   exact coverage and deterministic stress tests passed without a sanitizer.
