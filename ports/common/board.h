@@ -25,14 +25,14 @@
 #define BOARD_LTDC hLtdcHandler
 #endif
 #define BOARD_MAX_VERTICES 16384u
-#define BOARD_MODEL_BYTES (2u*1024u*1024u)
+#define BOARD_MODEL_BYTES (2u * 1024u * 1024u)
 extern LTDC_HandleTypeDef BOARD_LTDC;
 extern volatile uint32_t board_frame_count;
 extern volatile uint32_t board_render_cycles;
 extern volatile uint32_t board_error_code;
 void board_init(void);
 void board_renderer_init(dsp3d_context *context);
-void board_frame_begin(dsp3d_context *context,uint16_t background);
+void board_frame_begin(dsp3d_context *context, uint16_t background);
 void board_present(dsp3d_context *context);
 void *board_model_buffer(unsigned slot);
 void board_log(const char *text);

@@ -12,5 +12,5 @@ if(!(Test-Path $openocd)){throw 'Local OpenOCD missing. See tools/README.md.'}
 $deviceId=if($Board -eq 'f746'){'0x449'}else{'0x451'}
 $check='set device_id [expr {[mrw 0xe0042000] & 0xfff}]; if {$device_id != '+$deviceId+'} { error "Connected MCU does not match the requested board" }'
 $image=$firmware.Replace('\','/')
-& $openocd -s $scripts -f interface/stlink-dap.cfg -f target/stm32f7x.cfg -c 'adapter speed 1800' -c init -c halt -c $check -c "flash write_image erase {$image}" -c "verify_image {$image}" -c 'reset run' -c shutdown
+& $openocd -s $scripts -f interface/stlink-dap.cfg -f target/stm32f7x.cfg -c 'adapter speed 1800' -c 'reset_config srst_only srst_nogate connect_assert_srst' -c init -c 'reset halt' -c $check -c "flash write_image erase {$image}" -c "verify_image {$image}" -c 'reset run' -c shutdown
 if($LASTEXITCODE){throw 'Programming or verification failed.'}

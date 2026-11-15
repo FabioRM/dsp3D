@@ -2,129 +2,269 @@
  * Board startup and coherent CPU / DMA2D / LTDC ownership. */
 #include "board.h"
 #include <string.h>
-volatile uint32_t board_frame_count,board_render_cycles,board_error_code;
+volatile uint32_t board_frame_count, board_render_cycles, board_error_code;
 static UART_HandleTypeDef console;
 static DMA2D_HandleTypeDef fill;
 static uint16_t *buffers[2];
 static float *depth_buffer;
 static dsp3d_cached_vertex *vertex_cache;
 static uint8_t *model_buffers[2];
-static unsigned back=1;
+static unsigned back = 1;
 static volatile unsigned reload_pending;
-static size_t aligned(size_t n){return (n+31u)&~(size_t)31u;}
-void board_panic(uint32_t code){
-    board_error_code=code;
-    for(;;){BSP_LED_Toggle(LED1);HAL_Delay(150);}
+static size_t aligned(size_t n) {
+    return (n + 31u) & ~(size_t)31u;
 }
-static void clock_init(void){
-    __HAL_RCC_PWR_CLK_ENABLE();__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-    RCC_OscInitTypeDef osc={0};osc.OscillatorType=RCC_OSCILLATORTYPE_HSE;osc.HSEState=RCC_HSE_ON;
-    osc.PLL.PLLState=RCC_PLL_ON;osc.PLL.PLLSource=RCC_PLLSOURCE_HSE;
-    osc.PLL.PLLM=25;osc.PLL.PLLN=400;osc.PLL.PLLP=RCC_PLLP_DIV2;osc.PLL.PLLQ=8;
-    if(HAL_RCC_OscConfig(&osc)!=HAL_OK||HAL_PWREx_ActivateOverDrive()!=HAL_OK)board_panic(1);
-    RCC_ClkInitTypeDef clk={0};clk.ClockType=RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-    clk.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;clk.AHBCLKDivider=RCC_SYSCLK_DIV1;clk.APB1CLKDivider=RCC_HCLK_DIV4;clk.APB2CLKDivider=RCC_HCLK_DIV2;
-    if(HAL_RCC_ClockConfig(&clk,FLASH_LATENCY_6)!=HAL_OK)board_panic(2);
+void board_panic(uint32_t code) {
+    board_error_code = code;
+    for (;;) {
+        BSP_LED_Toggle(LED1);
+        HAL_Delay(150);
+    }
+}
+static void clock_init(void) {
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    RCC_OscInitTypeDef osc = {0};
+    osc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    osc.HSEState = RCC_HSE_ON;
+    osc.PLL.PLLState = RCC_PLL_ON;
+    osc.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    osc.PLL.PLLM = 25;
+    osc.PLL.PLLN = 400;
+    osc.PLL.PLLP = RCC_PLLP_DIV2;
+    osc.PLL.PLLQ = 8;
+    if (HAL_RCC_OscConfig(&osc) != HAL_OK || HAL_PWREx_ActivateOverDrive() != HAL_OK)
+        board_panic(1);
+    RCC_ClkInitTypeDef clk = {0};
+    clk.ClockType =
+        RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    clk.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    clk.APB1CLKDivider = RCC_HCLK_DIV4;
+    clk.APB2CLKDivider = RCC_HCLK_DIV2;
+    if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_6) != HAL_OK)
+        board_panic(2);
     /* 48 MHz SDMMC domain independent of the 200 MHz CPU / 100 MHz SDRAM. */
-    RCC_PeriphCLKInitTypeDef periph={0};periph.PeriphClockSelection=RCC_PERIPHCLK_CLK48|RCC_PERIPHCLK_SDMMC1;
-    periph.PLLSAI.PLLSAIN=384;periph.PLLSAI.PLLSAIP=RCC_PLLSAIP_DIV8;periph.PLLSAI.PLLSAIQ=8;periph.PLLSAI.PLLSAIR=5;
-    periph.PLLSAIDivQ=1;periph.PLLSAIDivR=RCC_PLLSAIDIVR_2;periph.Clk48ClockSelection=RCC_CLK48SOURCE_PLLSAIP;
-    periph.Sdmmc1ClockSelection=RCC_SDMMC1CLKSOURCE_CLK48;
-    if(HAL_RCCEx_PeriphCLKConfig(&periph)!=HAL_OK)board_panic(3);
+    RCC_PeriphCLKInitTypeDef periph = {0};
+    periph.PeriphClockSelection = RCC_PERIPHCLK_CLK48 | RCC_PERIPHCLK_SDMMC1;
+    periph.PLLSAI.PLLSAIN = 384;
+    periph.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV8;
+    periph.PLLSAI.PLLSAIQ = 8;
+    periph.PLLSAI.PLLSAIR = 5;
+    periph.PLLSAIDivQ = 1;
+    periph.PLLSAIDivR = RCC_PLLSAIDIVR_2;
+    periph.Clk48ClockSelection = RCC_CLK48SOURCE_PLLSAIP;
+    periph.Sdmmc1ClockSelection = RCC_SDMMC1CLKSOURCE_CLK48;
+    if (HAL_RCCEx_PeriphCLKConfig(&periph) != HAL_OK)
+        board_panic(3);
 }
-static void mpu_init(void){
-    MPU_Region_InitTypeDef m={0};HAL_MPU_Disable();
-    m.Enable=MPU_REGION_ENABLE;m.Number=MPU_REGION_NUMBER0;m.BaseAddress=0xc0000000;
-    m.Size=MPU_REGION_SIZE_8MB;m.AccessPermission=MPU_REGION_FULL_ACCESS;
-    m.IsBufferable=MPU_ACCESS_BUFFERABLE;m.IsCacheable=MPU_ACCESS_CACHEABLE;m.IsShareable=MPU_ACCESS_NOT_SHAREABLE;
-    m.TypeExtField=MPU_TEX_LEVEL0;m.DisableExec=MPU_INSTRUCTION_ACCESS_DISABLE;HAL_MPU_ConfigRegion(&m);
+static void mpu_init(void) {
+    MPU_Region_InitTypeDef m = {0};
+    HAL_MPU_Disable();
+    m.Enable = MPU_REGION_ENABLE;
+    m.Number = MPU_REGION_NUMBER0;
+    m.BaseAddress = 0xc0000000;
+    m.Size = MPU_REGION_SIZE_8MB;
+    m.AccessPermission = MPU_REGION_FULL_ACCESS;
+    m.IsBufferable = MPU_ACCESS_BUFFERABLE;
+    m.IsCacheable = MPU_ACCESS_CACHEABLE;
+    m.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+    m.TypeExtField = MPU_TEX_LEVEL0;
+    m.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+    HAL_MPU_ConfigRegion(&m);
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 #ifndef BOARD_F769
 /* Keep the LCD PLL and SDMMC kernel consistent: 192/4 = 48 MHz. */
-void BSP_LCD_ClockConfig(LTDC_HandleTypeDef *ltdc,void *params){
-    (void)ltdc;(void)params;RCC_PeriphCLKInitTypeDef p={0};
-    p.PeriphClockSelection=RCC_PERIPHCLK_LTDC|RCC_PERIPHCLK_CLK48|RCC_PERIPHCLK_SDMMC1;
-    p.PLLSAI.PLLSAIN=192;p.PLLSAI.PLLSAIP=RCC_PLLSAIP_DIV4;p.PLLSAI.PLLSAIQ=4;p.PLLSAI.PLLSAIR=5;
-    p.PLLSAIDivQ=1;p.PLLSAIDivR=RCC_PLLSAIDIVR_4;p.Clk48ClockSelection=RCC_CLK48SOURCE_PLLSAIP;
-    p.Sdmmc1ClockSelection=RCC_SDMMC1CLKSOURCE_CLK48;
-    if(HAL_RCCEx_PeriphCLKConfig(&p)!=HAL_OK)board_panic(16);
+void BSP_LCD_ClockConfig(LTDC_HandleTypeDef *ltdc, void *params) {
+    (void)ltdc;
+    (void)params;
+    RCC_PeriphCLKInitTypeDef p = {0};
+    p.PeriphClockSelection = RCC_PERIPHCLK_LTDC | RCC_PERIPHCLK_CLK48 | RCC_PERIPHCLK_SDMMC1;
+    p.PLLSAI.PLLSAIN = 192;
+    p.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV4;
+    p.PLLSAI.PLLSAIQ = 4;
+    p.PLLSAI.PLLSAIR = 5;
+    p.PLLSAIDivQ = 1;
+    p.PLLSAIDivR = RCC_PLLSAIDIVR_4;
+    p.Clk48ClockSelection = RCC_CLK48SOURCE_PLLSAIP;
+    p.Sdmmc1ClockSelection = RCC_SDMMC1CLKSOURCE_CLK48;
+    if (HAL_RCCEx_PeriphCLKConfig(&p) != HAL_OK)
+        board_panic(16);
 }
 #endif
-static void console_init(void){
-    console.Init.BaudRate=115200;console.Init.WordLength=UART_WORDLENGTH_8B;console.Init.StopBits=UART_STOPBITS_1;
-    console.Init.Parity=UART_PARITY_NONE;console.Init.Mode=UART_MODE_TX_RX;console.Init.HwFlowCtl=UART_HWCONTROL_NONE;
-    console.Init.OverSampling=UART_OVERSAMPLING_16;
-    BSP_COM_Init(COM1,&console);
+static void console_init(void) {
+    console.Init.BaudRate = 115200;
+    console.Init.WordLength = UART_WORDLENGTH_8B;
+    console.Init.StopBits = UART_STOPBITS_1;
+    console.Init.Parity = UART_PARITY_NONE;
+    console.Init.Mode = UART_MODE_TX_RX;
+    console.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    console.Init.OverSampling = UART_OVERSAMPLING_16;
+    BSP_COM_Init(COM1, &console);
 }
-void board_log(const char *text){HAL_UART_Transmit(&console,(uint8_t *)text,(uint16_t)strlen(text),100);}
-int board_read_char(void){uint8_t ch;return HAL_UART_Receive(&console,&ch,1,0)==HAL_OK?ch:-1;}
-void board_init(void){
-    mpu_init();SCB_EnableICache();SCB_EnableDCache();HAL_Init();
-    BSP_LED_Init(LED1);clock_init();console_init();BSP_PB_Init(BUTTON_KEY,BUTTON_MODE_GPIO);
+void board_log(const char *text) {
+    HAL_UART_Transmit(&console, (uint8_t *)text, (uint16_t)strlen(text), 100);
+}
+int board_read_char(void) {
+    uint8_t ch;
+    return HAL_UART_Receive(&console, &ch, 1, 0) == HAL_OK ? ch : -1;
+}
+void board_init(void) {
+    mpu_init();
+    SCB_EnableICache();
+    SCB_EnableDCache();
+    HAL_Init();
+    DBGMCU->CR |= DBGMCU_CR_DBG_SLEEP;
+    BSP_LED_Init(LED1);
+    clock_init();
+    console_init();
+    BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_GPIO);
     board_log("\r\ndsp3D " DSP3D_VERSION " / " BOARD_NAME " / 200 MHz\r\n");
-    if(BSP_LCD_Init()!=LCD_OK)board_panic(5);
+    if (BSP_LCD_Init() != LCD_OK)
+        board_panic(5);
     /* The BSP LCD initialization also initializes SDRAM. Test a reserved final page. */
-    volatile uint32_t *probe=(volatile uint32_t *)0xc07ff000;
-    for(unsigned i=0;i<1024;i++)probe[i]=0x5a5a0000u^i;
-    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)probe,4096);
-    for(unsigned i=0;i<1024;i++)if(probe[i]!=(0x5a5a0000u^i))board_panic(6);
-    uintptr_t p=0xc0000000;size_t color_bytes=aligned(BOARD_WIDTH*BOARD_HEIGHT*2u);
-    buffers[0]=(uint16_t *)p;p+=color_bytes;buffers[1]=(uint16_t *)p;p+=color_bytes;
-    depth_buffer=(float *)p;p+=aligned(BOARD_WIDTH*BOARD_HEIGHT*4u);
-    vertex_cache=(dsp3d_cached_vertex *)p;p+=aligned(BOARD_MAX_VERTICES*sizeof(*vertex_cache));
-    model_buffers[0]=(uint8_t *)p;p+=BOARD_MODEL_BYTES;model_buffers[1]=(uint8_t *)p;p+=BOARD_MODEL_BYTES;
-    if(p>0xc07ff000)board_panic(7);
-    memset(buffers[0],0,color_bytes*2);SCB_CleanDCache_by_Addr((uint32_t *)buffers[0],(int32_t)(color_bytes*2));
-    LTDC_LayerCfgTypeDef layer={0};layer.WindowX1=BOARD_WIDTH;layer.WindowY1=BOARD_HEIGHT;
-    layer.PixelFormat=LTDC_PIXEL_FORMAT_RGB565;layer.FBStartAdress=(uint32_t)buffers[0];layer.Alpha=255;
-    layer.BlendingFactor1=LTDC_BLENDING_FACTOR1_CA;layer.BlendingFactor2=LTDC_BLENDING_FACTOR2_CA;
-    layer.ImageWidth=BOARD_WIDTH;layer.ImageHeight=BOARD_HEIGHT;
-    if(HAL_LTDC_ConfigLayer(&BOARD_LTDC,&layer,0)!=HAL_OK)board_panic(8);
-    __HAL_LTDC_LAYER_DISABLE(&BOARD_LTDC,1);__HAL_LTDC_RELOAD_CONFIG(&BOARD_LTDC);
-    HAL_NVIC_SetPriority(LTDC_IRQn,5,0);HAL_NVIC_EnableIRQ(LTDC_IRQn);
+    volatile uint32_t *probe = (volatile uint32_t *)0xc07ff000;
+    for (unsigned i = 0; i < 1024; i++)
+        probe[i] = 0x5a5a0000u ^ i;
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)probe, 4096);
+    for (unsigned i = 0; i < 1024; i++)
+        if (probe[i] != (0x5a5a0000u ^ i))
+            board_panic(6);
+    uintptr_t p = 0xc0000000;
+    size_t color_bytes = aligned(BOARD_WIDTH * BOARD_HEIGHT * 2u);
+    buffers[0] = (uint16_t *)p;
+    p += color_bytes;
+    buffers[1] = (uint16_t *)p;
+    p += color_bytes;
+    depth_buffer = (float *)p;
+    p += aligned(BOARD_WIDTH * BOARD_HEIGHT * 4u);
+    vertex_cache = (dsp3d_cached_vertex *)p;
+    p += aligned(BOARD_MAX_VERTICES * sizeof(*vertex_cache));
+    model_buffers[0] = (uint8_t *)p;
+    p += BOARD_MODEL_BYTES;
+    model_buffers[1] = (uint8_t *)p;
+    p += BOARD_MODEL_BYTES;
+    if (p > 0xc07ff000)
+        board_panic(7);
+    memset(buffers[0], 0, color_bytes * 2);
+    SCB_CleanDCache_by_Addr((uint32_t *)buffers[0], (int32_t)(color_bytes * 2));
+    LTDC_LayerCfgTypeDef layer = {0};
+    layer.WindowX1 = BOARD_WIDTH;
+    layer.WindowY1 = BOARD_HEIGHT;
+    layer.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+    layer.FBStartAdress = (uint32_t)buffers[0];
+    layer.Alpha = 255;
+    layer.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+    layer.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+    layer.ImageWidth = BOARD_WIDTH;
+    layer.ImageHeight = BOARD_HEIGHT;
+    if (HAL_LTDC_ConfigLayer(&BOARD_LTDC, &layer, 0) != HAL_OK)
+        board_panic(8);
+    __HAL_LTDC_LAYER_DISABLE(&BOARD_LTDC, 1);
+    __HAL_LTDC_RELOAD_CONFIG(&BOARD_LTDC);
+    HAL_NVIC_SetPriority(LTDC_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(LTDC_IRQn);
     BSP_LCD_DisplayOn();
-    if(BSP_TS_Init(BOARD_WIDTH,BOARD_HEIGHT)!=TS_OK)board_log("Touch initialization failed; use the user button.\r\n");
-    __HAL_RCC_DMA2D_CLK_ENABLE();fill.Instance=DMA2D;fill.Init.Mode=DMA2D_R2M;
-    fill.Init.ColorMode=DMA2D_OUTPUT_RGB565;fill.Init.OutputOffset=0;
-    if(HAL_DMA2D_Init(&fill)!=HAL_OK)board_panic(9);
-    CoreDebug->DEMCR|=CoreDebug_DEMCR_TRCENA_Msk;
+    if (BSP_TS_Init(BOARD_WIDTH, BOARD_HEIGHT) != TS_OK)
+        board_log("Touch initialization failed; use the user button.\r\n");
+    __HAL_RCC_DMA2D_CLK_ENABLE();
+    fill.Instance = DMA2D;
+    fill.Init.Mode = DMA2D_R2M;
+    fill.Init.ColorMode = DMA2D_OUTPUT_RGB565;
+    fill.Init.OutputOffset = 0;
+    if (HAL_DMA2D_Init(&fill) != HAL_OK)
+        board_panic(9);
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     /* Cortex-M7 implements the optional CoreSight software lock. */
-    *(volatile uint32_t *)0xe0001fb0=0xc5acce55;
-    DWT->CYCCNT=0;DWT->CTRL|=DWT_CTRL_CYCCNTENA_Msk;__DSB();__ISB();
+    *(volatile uint32_t *)0xe0001fb0 = 0xc5acce55;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    __DSB();
+    __ISB();
     board_log("SDRAM probe passed; LCD and renderer buffers ready.\r\n");
 }
-void board_renderer_init(dsp3d_context *c){
-    if(dsp3d_init(c,BOARD_WIDTH,BOARD_HEIGHT,buffers[back],depth_buffer,vertex_cache,BOARD_MAX_VERTICES)!=DSP3D_OK)board_panic(10);
+void board_renderer_init(dsp3d_context *c) {
+    if (dsp3d_init(c, BOARD_WIDTH, BOARD_HEIGHT, buffers[back], depth_buffer, vertex_cache,
+                   BOARD_MAX_VERTICES) != DSP3D_OK)
+        board_panic(10);
 }
-void board_frame_begin(dsp3d_context *c,uint16_t background){
-    c->color=buffers[back];int32_t bytes=(int32_t)aligned(BOARD_WIDTH*BOARD_HEIGHT*2u);
-    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)c->color,bytes);__DSB();
-    uint32_t rgb=((uint32_t)(background>>11)*255u/31u)<<16;
-    rgb|=((uint32_t)((background>>5)&63)*255u/63u)<<8;rgb|=(uint32_t)(background&31)*255u/31u;
-    if(HAL_DMA2D_Start(&fill,rgb,(uint32_t)c->color,BOARD_WIDTH,BOARD_HEIGHT)!=HAL_OK||HAL_DMA2D_PollForTransfer(&fill,100)!=HAL_OK)board_panic(11);
-    SCB_InvalidateDCache_by_Addr((uint32_t *)c->color,bytes);
-    memset(c->depth,0,BOARD_WIDTH*BOARD_HEIGHT*4u);memset(&c->stats,0,sizeof(c->stats));
+void board_frame_begin(dsp3d_context *c, uint16_t background) {
+    c->color = buffers[back];
+    int32_t bytes = (int32_t)aligned(BOARD_WIDTH * BOARD_HEIGHT * 2u);
+    /* Every cache line is overwritten; discard dirty old back-buffer pixels. */
+    SCB_InvalidateDCache_by_Addr((uint32_t *)c->color, bytes);
+    __DSB();
+    uint32_t rgb = ((uint32_t)(background >> 11) * 255u / 31u) << 16;
+    rgb |= ((uint32_t)((background >> 5) & 63) * 255u / 63u) << 8;
+    rgb |= (uint32_t)(background & 31) * 255u / 31u;
+    if (HAL_DMA2D_Start(&fill, rgb, (uint32_t)c->color, BOARD_WIDTH, BOARD_HEIGHT) != HAL_OK ||
+        HAL_DMA2D_PollForTransfer(&fill, 100) != HAL_OK)
+        board_panic(11);
+    SCB_InvalidateDCache_by_Addr((uint32_t *)c->color, bytes);
+    dsp3d_clear_depth(c);
 }
-void board_present(dsp3d_context *c){
-    SCB_CleanDCache_by_Addr((uint32_t *)c->color,(int32_t)aligned(BOARD_WIDTH*BOARD_HEIGHT*2u));__DSB();
-    if(HAL_LTDC_SetAddress_NoReload(&BOARD_LTDC,(uint32_t)c->color,0)!=HAL_OK)board_panic(12);
-    reload_pending=1;
-    if(HAL_LTDC_Reload(&BOARD_LTDC,LTDC_RELOAD_VERTICAL_BLANKING)!=HAL_OK)board_panic(13);
-    uint32_t start=HAL_GetTick();
-    while(reload_pending){if(HAL_GetTick()-start>100)board_panic(14);__WFI();}
-    back^=1;board_frame_count++;
+void board_present(dsp3d_context *c) {
+    SCB_CleanDCache_by_Addr((uint32_t *)c->color,
+                            (int32_t)aligned(BOARD_WIDTH * BOARD_HEIGHT * 2u));
+    __DSB();
+    if (HAL_LTDC_SetAddress_NoReload(&BOARD_LTDC, (uint32_t)c->color, 0) != HAL_OK)
+        board_panic(12);
+    reload_pending = 1;
+    if (HAL_LTDC_Reload(&BOARD_LTDC, LTDC_RELOAD_VERTICAL_BLANKING) != HAL_OK)
+        board_panic(13);
+    uint32_t start = HAL_GetTick();
+    while (reload_pending) {
+        if (HAL_GetTick() - start > 100)
+            board_panic(14);
+        __WFI();
+    }
+    back ^= 1;
+    board_frame_count++;
 }
-void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *h){(void)h;reload_pending=0;}
-void LTDC_IRQHandler(void){HAL_LTDC_IRQHandler(&BOARD_LTDC);}
+void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *h) {
+    (void)h;
+    reload_pending = 0;
+}
+void LTDC_IRQHandler(void) {
+    HAL_LTDC_IRQHandler(&BOARD_LTDC);
+}
 #ifdef BOARD_F769
 extern DSI_HandleTypeDef hdsi_discovery;
-void DSI_IRQHandler(void){HAL_DSI_IRQHandler(&hdsi_discovery);}
+void DSI_IRQHandler(void) {
+    HAL_DSI_IRQHandler(&hdsi_discovery);
+}
 #endif
-void SysTick_Handler(void){HAL_IncTick();}
-void HardFault_Handler(void){board_error_code=0x48465254;for(;;){__NOP();}}
-void MemManage_Handler(void){board_error_code=0x4d454d;for(;;){__NOP();}}
-void BusFault_Handler(void){board_error_code=0x425553;for(;;){__NOP();}}
-void UsageFault_Handler(void){board_error_code=0x555347;for(;;){__NOP();}}
-uint32_t board_cycles(void){return DWT->CYCCNT;}
-void *board_model_buffer(unsigned slot){return model_buffers[slot&1u];}
+void SysTick_Handler(void) {
+    HAL_IncTick();
+}
+void HardFault_Handler(void) {
+    board_error_code = 0x48465254;
+    for (;;) {
+        __NOP();
+    }
+}
+void MemManage_Handler(void) {
+    board_error_code = 0x4d454d;
+    for (;;) {
+        __NOP();
+    }
+}
+void BusFault_Handler(void) {
+    board_error_code = 0x425553;
+    for (;;) {
+        __NOP();
+    }
+}
+void UsageFault_Handler(void) {
+    board_error_code = 0x555347;
+    for (;;) {
+        __NOP();
+    }
+}
+uint32_t board_cycles(void) {
+    return DWT->CYCCNT;
+}
+void *board_model_buffer(unsigned slot) {
+    return model_buffers[slot & 1u];
+}
