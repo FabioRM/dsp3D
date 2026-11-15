@@ -13,6 +13,9 @@ typedef struct {
     float x, y, z;
 } dsp3d_vec3;
 typedef struct {
+    uint32_t x, y, width, height;
+} dsp3d_rect;
+typedef struct {
     dsp3d_vec3 position, normal;
 } dsp3d_vertex;
 typedef struct {
@@ -62,6 +65,8 @@ typedef struct {
     uint8_t palette_valid;
     uint8_t depth_initialized;
     uint32_t dirty_x0, dirty_y0, dirty_x1, dirty_y1;
+    uint32_t color_stride, depth_stride; /* elements, not bytes */
+    dsp3d_rect viewport, scissor;
 } dsp3d_context;
 /* No allocation, global renderer state, HAL, or display dependency. */
 dsp3d_result dsp3d_init(dsp3d_context *ctx, uint32_t width, uint32_t height, uint16_t *color,
@@ -69,6 +74,13 @@ dsp3d_result dsp3d_init(dsp3d_context *ctx, uint32_t width, uint32_t height, uin
 void dsp3d_begin_frame(dsp3d_context *ctx, uint16_t background);
 /* Reset depth/statistics when a platform clears color using DMA. */
 void dsp3d_clear_depth(dsp3d_context *ctx);
+dsp3d_result dsp3d_bind_target(dsp3d_context *ctx, uint32_t width, uint32_t height, uint16_t *color,
+                               uint32_t color_stride, float *depth, uint32_t depth_stride);
+dsp3d_result dsp3d_set_viewport(dsp3d_context *ctx, dsp3d_rect viewport);
+dsp3d_result dsp3d_set_scissor(dsp3d_context *ctx, dsp3d_rect scissor);
+/* Nearest-neighbor RGB565 upscale/downscale; source and destination must not overlap. */
+dsp3d_result dsp3d_scale_rgb565(const uint16_t *source, uint32_t sw, uint32_t sh, uint32_t ss,
+                                uint16_t *destination, uint32_t dw, uint32_t dh, uint32_t ds);
 dsp3d_result dsp3d_draw(dsp3d_context *ctx, const dsp3d_mesh *mesh,
                         const dsp3d_transform *transform, dsp3d_mode mode);
 /* Validate once before drawing a caller-created mesh. Binary loading does this. */

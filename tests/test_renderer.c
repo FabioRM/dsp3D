@@ -170,7 +170,49 @@ static void test_shared_edges_and_dirty_clear(void) {
         assert(depth.data[i] == 0);
     guards();
 }
+static void test_viewport_stride_and_scale(void) {
+    uint16_t pixels[15 * 10];
+    float z[17 * 10];
+    dsp3d_cached_vertex cache[3];
+    dsp3d_context c;
+    for (unsigned i = 0; i < 150; i++)
+        pixels[i] = 0xdead;
+    for (unsigned i = 0; i < 170; i++)
+        z[i] = -7;
+    assert(dsp3d_init(&c, 12, 10, pixels, z, cache, 3) == DSP3D_OK);
+    assert(dsp3d_bind_target(&c, 12, 10, pixels, 15, z, 17) == DSP3D_OK);
+    assert(dsp3d_set_viewport(&c, (dsp3d_rect){2, 2, 8, 6}) == DSP3D_OK);
+    assert(dsp3d_set_scissor(&c, (dsp3d_rect){4, 3, 4, 3}) == DSP3D_OK);
+    assert(dsp3d_set_viewport(&c, (dsp3d_rect){UINT32_MAX, 0, 1, 1}) == DSP3D_INVALID_ARGUMENT);
+    dsp3d_begin_frame(&c, 0);
+    c.ambient = 1;
+    const dsp3d_vertex v[] = {
+        {{-2, -2, 0}, {0, 0, 1}}, {{2, -2, 0}, {0, 0, 1}}, {{0, 2, 0}, {0, 0, 1}}};
+    const dsp3d_triangle f[] = {{{0, 1, 2}, 0xffffff}};
+    const dsp3d_mesh m = {v, f, 3, 1};
+    assert(dsp3d_draw(&c, &m, &identity, DSP3D_FLAT) == DSP3D_OK);
+    assert(c.stats.shaded_pixels > 0);
+    for (unsigned y = 0; y < 10; y++) {
+        for (unsigned x = 0; x < 15; x++)
+            if (!(x >= 4 && x < 8 && y >= 3 && y < 6))
+                assert(pixels[y * 15 + x] == 0xdead);
+        for (unsigned x = 12; x < 17; x++)
+            assert(z[y * 17 + x] == -7);
+    }
+    dsp3d_begin_frame(&c, 0);
+    for (unsigned y = 0; y < 10; y++)
+        for (unsigned x = 0; x < 12; x++)
+            assert(z[y * 17 + x] == 0);
+    uint16_t source[] = {1, 2, 99, 3, 4, 99}, output[24];
+    for (unsigned i = 0; i < 24; i++)
+        output[i] = 55;
+    assert(dsp3d_scale_rgb565(source, 2, 2, 3, output, 4, 4, 6) == DSP3D_OK);
+    for (unsigned y = 0; y < 4; y++)
+        for (unsigned x = 0; x < 6; x++)
+            assert(output[y * 6 + x] == (x < 4 ? source[(y / 2) * 3 + x / 2] : 55));
+}
 int main(void) {
+    test_viewport_stride_and_scale();
     test_models();
     test_depth_and_culling();
     test_clipping_and_normals();

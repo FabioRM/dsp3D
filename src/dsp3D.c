@@ -4,6 +4,8 @@
 #include "dsp3D.h"
 #include <math.h>
 #include <string.h>
+#define MAX_INT(a, b) ((a) > (b) ? (a) : (b))
+#define MIN_INT(a, b) ((a) < (b) ? (a) : (b))
 #ifdef DSP3D_CMSIS
 #include "arm_math.h"
 #define fast_sin arm_sin_f32
@@ -84,6 +86,8 @@ dsp3d_result dsp3d_init(dsp3d_context *c, uint32_t w, uint32_t h, uint16_t *colo
     memset(c, 0, sizeof(*c));
     c->width = w;
     c->height = h;
+    c->color_stride = c->depth_stride = w;
+    c->viewport = c->scissor = (dsp3d_rect){0, 0, w, h};
     c->color = color;
     c->depth = depth;
     c->scratch = scratch;
@@ -94,17 +98,83 @@ dsp3d_result dsp3d_init(dsp3d_context *c, uint32_t w, uint32_t h, uint16_t *colo
     c->backface_culling = 1;
     return DSP3D_OK;
 }
+static void clip_bounds(const dsp3d_context *c, uint32_t *x0, uint32_t *y0, uint32_t *x1,
+                        uint32_t *y1) {
+    *x0 = c->viewport.x > c->scissor.x ? c->viewport.x : c->scissor.x;
+    *y0 = c->viewport.y > c->scissor.y ? c->viewport.y : c->scissor.y;
+    uint32_t vx = c->viewport.x + c->viewport.width, sx = c->scissor.x + c->scissor.width;
+    uint32_t vy = c->viewport.y + c->viewport.height, sy = c->scissor.y + c->scissor.height;
+    *x1 = vx < sx ? vx : sx;
+    *y1 = vy < sy ? vy : sy;
+}
+static int valid_rect(const dsp3d_context *c, dsp3d_rect r) {
+    return r.width && r.height && r.x < c->width && r.y < c->height && r.width <= c->width - r.x &&
+           r.height <= c->height - r.y;
+}
+dsp3d_result dsp3d_bind_target(dsp3d_context *c, uint32_t w, uint32_t h, uint16_t *color,
+                               uint32_t cs, float *depth, uint32_t ds) {
+    if (!c || !w || !h || w > 2047 || h > 2047 || cs < w || ds < w || !color || !depth ||
+        ((uintptr_t)color & 1u) || ((uintptr_t)depth & 3u) ||
+        (uint64_t)cs * h > SIZE_MAX / sizeof(*color) ||
+        (uint64_t)ds * h > SIZE_MAX / sizeof(*depth))
+        return DSP3D_INVALID_ARGUMENT;
+    c->width = w;
+    c->height = h;
+    c->color = color;
+    c->depth = depth;
+    c->color_stride = cs;
+    c->depth_stride = ds;
+    c->viewport = c->scissor = (dsp3d_rect){0, 0, w, h};
+    c->depth_initialized = 0;
+    return DSP3D_OK;
+}
+dsp3d_result dsp3d_set_viewport(dsp3d_context *c, dsp3d_rect r) {
+    if (!c || !valid_rect(c, r))
+        return DSP3D_INVALID_ARGUMENT;
+    c->viewport = r;
+    return DSP3D_OK;
+}
+dsp3d_result dsp3d_set_scissor(dsp3d_context *c, dsp3d_rect r) {
+    if (!c || !valid_rect(c, r))
+        return DSP3D_INVALID_ARGUMENT;
+    c->scissor = r;
+    return DSP3D_OK;
+}
 void dsp3d_begin_frame(dsp3d_context *c, uint16_t background) {
     if (!c)
         return;
-    size_t count = (size_t)c->width * c->height, i = 0;
+    uint32_t x0, y0, x1, y1;
+    clip_bounds(c, &x0, &y0, &x1, &y1);
     uint32_t pair = (uint32_t)background | ((uint32_t)background << 16);
-    /* Alignment-safe paired stores; GCC folds these memcpy calls into stores. */
-    for (; i + 1 < count; i += 2)
-        memcpy(c->color + i, &pair, 4);
-    if (i < count)
-        c->color[i] = background;
+    if (x0 < x1)
+        for (uint32_t y = y0; y < y1; y++) {
+            uint16_t *row = c->color + (size_t)y * c->color_stride;
+            uint32_t x = x0;
+            for (; x + 1 < x1; x += 2)
+                memcpy(row + x, &pair, 4);
+            if (x < x1)
+                row[x] = background;
+        }
     dsp3d_clear_depth(c);
+}
+dsp3d_result dsp3d_scale_rgb565(const uint16_t *s, uint32_t sw, uint32_t sh, uint32_t ss,
+                                uint16_t *d, uint32_t dw, uint32_t dh, uint32_t ds) {
+    if (!s || !d || !sw || !sh || !dw || !dh || ss < sw || ds < dw || sw > 2047 || sh > 2047 ||
+        dw > 2047 || dh > 2047 || ((uintptr_t)s & 1u) || ((uintptr_t)d & 1u) ||
+        (uint64_t)ss * sh > SIZE_MAX / 2 || (uint64_t)ds * dh > SIZE_MAX / 2)
+        return DSP3D_INVALID_ARGUMENT;
+    if (dw == sw * 2 && dh == sh * 2) {
+        for (uint32_t y = 0; y < sh; y++)
+            for (uint32_t x = 0; x < sw; x++) {
+                uint32_t pair = (uint32_t)s[y * ss + x] * 0x10001u;
+                memcpy(d + (size_t)(y * 2) * ds + x * 2, &pair, 4);
+                memcpy(d + (size_t)(y * 2 + 1) * ds + x * 2, &pair, 4);
+            }
+    } else
+        for (uint32_t y = 0; y < dh; y++)
+            for (uint32_t x = 0; x < dw; x++)
+                d[(size_t)y * ds + x] = s[(size_t)(y * sh / dh) * ss + x * sw / dw];
+    return DSP3D_OK;
 }
 /* Volatile paired stores prevent GCC from replacing this with nano-libc's
  * byte-at-a-time memset. This also remains useful with other compact C runtimes. */
@@ -128,11 +198,13 @@ void dsp3d_clear_depth(dsp3d_context *c) {
     if (!c)
         return;
     if (!c->depth_initialized) {
-        zero_depth(c->depth, (size_t)c->width * c->height);
+        for (uint32_t y = 0; y < c->height; y++)
+            zero_depth(c->depth + (size_t)y * c->depth_stride, c->width);
         c->depth_initialized = 1;
     } else if (c->dirty_x0 < c->dirty_x1 && c->dirty_y0 < c->dirty_y1) {
         for (uint32_t y = c->dirty_y0; y < c->dirty_y1; y++)
-            zero_depth(c->depth + (size_t)y * c->width + c->dirty_x0, c->dirty_x1 - c->dirty_x0);
+            zero_depth(c->depth + (size_t)y * c->depth_stride + c->dirty_x0,
+                       c->dirty_x1 - c->dirty_x0);
     }
     c->dirty_x0 = c->width;
     c->dirty_y0 = c->height;
@@ -206,10 +278,14 @@ static int32_t edge_fixed(int ax, int ay, int bx, int by, int px, int py) {
 static void pixel(dsp3d_context *c, int x, int y, float z, uint16_t color) {
     if ((unsigned)x >= c->width || (unsigned)y >= c->height)
         return;
-    size_t i = (size_t)y * c->width + (unsigned)x;
+    uint32_t x0, y0, x1, y1;
+    clip_bounds(c, &x0, &y0, &x1, &y1);
+    if ((unsigned)x < x0 || (unsigned)x >= x1 || (unsigned)y < y0 || (unsigned)y >= y1)
+        return;
+    size_t i = (size_t)y * c->depth_stride + (unsigned)x;
     if (z >= c->depth[i]) {
         c->depth[i] = z;
-        c->color[i] = color;
+        c->color[(size_t)y * c->color_stride + (unsigned)x] = color;
         c->stats.shaded_pixels++;
         dirty(c, (unsigned)x, (unsigned)y, (unsigned)x + 1, (unsigned)y + 1);
     }
@@ -264,6 +340,12 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
     int x1 = (int)fminf((float)c->width - 1, floorf(fmaxf(a.x, fmaxf(b.x, d.x)) - 0.5f));
     int y0 = (int)fmaxf(0, ceilf(fminf(a.y, fminf(b.y, d.y)) - 0.5f));
     int y1 = (int)fminf((float)c->height - 1, floorf(fmaxf(a.y, fmaxf(b.y, d.y)) - 0.5f));
+    uint32_t cx0, cy0, cx1, cy1;
+    clip_bounds(c, &cx0, &cy0, &cx1, &cy1);
+    x0 = MAX_INT(x0, (int)cx0);
+    y0 = MAX_INT(y0, (int)cy0);
+    x1 = MIN_INT(x1, (int)cx1 - 1);
+    y1 = MIN_INT(y1, (int)cy1 - 1);
     if (x0 > x1 || y0 > y1)
         return;
     dirty(c, (unsigned)x0, (unsigned)y0, (unsigned)x1 + 1, (unsigned)y1 + 1);
@@ -286,12 +368,13 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
     for (int y = y0; y <= y1; y++) {
         int32_t w0 = e0, w1 = e1, w2 = e2;
         float z = zrow, l = lrow;
-        size_t index = (size_t)y * c->width + (unsigned)x0;
-        for (int x = x0; x <= x1; x++, index++) {
+        size_t index = (size_t)y * c->depth_stride + (unsigned)x0;
+        size_t color_index = (size_t)y * c->color_stride + (unsigned)x0;
+        for (int x = x0; x <= x1; x++, index++, color_index++) {
             if ((w0 > 0 || (w0 == 0 && tl0)) && (w1 > 0 || (w1 == 0 && tl1)) &&
                 (w2 > 0 || (w2 == 0 && tl2)) && z >= c->depth[index]) {
                 c->depth[index] = z;
-                c->color[index] = mode == DSP3D_FLAT ? flat_color : c->palette[intensity(l)];
+                c->color[color_index] = mode == DSP3D_FLAT ? flat_color : c->palette[intensity(l)];
                 c->stats.shaded_pixels++;
             }
             w0 += ex0;
@@ -328,8 +411,11 @@ dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_trans
     dsp3d_vec3 light = normalized(c->light_direction);
     float r[9];
     rotation(t->rotation, r);
-    float ky = tanf(c->camera.vertical_fov * 0.5f), kx = ky * (float)c->width / (float)c->height;
-    float hx = (float)c->width * 0.5f, hy = (float)c->height * 0.5f, fx = hx / kx, fy = hy / ky;
+    float ky = tanf(c->camera.vertical_fov * 0.5f),
+          kx = ky * (float)c->viewport.width / (float)c->viewport.height;
+    float fx = (float)c->viewport.width * 0.5f / kx, fy = (float)c->viewport.height * 0.5f / ky;
+    float hx = (float)c->viewport.x + (float)c->viewport.width * 0.5f,
+          hy = (float)c->viewport.y + (float)c->viewport.height * 0.5f;
     for (uint32_t i = 0; i < m->vertex_count; i++) {
         dsp3d_vec3 v = rotate(m->vertices[i].position, r);
         v = (dsp3d_vec3){v.x * t->scale + t->position.x, v.y * t->scale + t->position.y,
