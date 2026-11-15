@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(dsp3D VERSION 2.0.0 LANGUAGES C)
 option(DSP3D_BUILD_TESTS "Build native correctness tests and reference renderer" ON)
-add_library(dsp3d STATIC src/dsp3D.c src/dsp3D_model.c)
+add_library(dsp3d STATIC src/dsp3D.c src/dsp3D_model.c src/dsp3D_geometry.c)
 add_library(dsp3D::dsp3d ALIAS dsp3d)
 target_include_directories(dsp3d PUBLIC inc)
 target_compile_features(dsp3d PUBLIC c_std_11)

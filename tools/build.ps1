@@ -29,7 +29,7 @@ try {
     foreach($include in $includes){$flags+="-I$include"}
     $halUnits=@('hal','hal_cortex','hal_rcc','hal_rcc_ex','hal_gpio','hal_dma','hal_dma2d','hal_flash','hal_flash_ex','hal_pwr','hal_pwr_ex','hal_i2c','hal_i2c_ex','hal_uart','hal_uart_ex','hal_sdram','hal_ltdc','hal_ltdc_ex','hal_sd','ll_fmc','ll_sdmmc')
     if($Board -eq 'f769'){$halUnits+='hal_dsi'}
-    $sources=@('src/dsp3D.c','src/dsp3D_model.c','examples/viewer/main.c','ports/common/board.c','ports/common/sd_diskio.c','ports/common/syscalls.c','assets/generated/metamask.c','assets/generated/suzanne.c',"$fat/ff.c","$fat/option/ccsbcs.c","$device/Source/Templates/system_stm32f7xx.c","$device/Source/Templates/gcc/startup_$startup.s")
+    $sources=@('src/dsp3D.c','src/dsp3D_model.c','src/dsp3D_geometry.c','examples/viewer/main.c','ports/common/board.c','ports/common/sd_diskio.c','ports/common/syscalls.c','assets/generated/metamask.c','assets/generated/suzanne.c',"$fat/ff.c","$fat/option/ccsbcs.c","$device/Source/Templates/system_stm32f7xx.c","$device/Source/Templates/gcc/startup_$startup.s")
     foreach($unit in $halUnits){$sources+="$hal/Src/stm32f7xx_$unit.c"}
     foreach($suffix in @('','_lcd','_sdram','_ts','_sd')){$sources+="$bsp/$bspPrefix$suffix.c"}
     if($Board -eq 'f746'){$sources+="$sdk/Drivers/BSP/Components/ft5336/ft5336.c"}

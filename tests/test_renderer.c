@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include "dsp3D.h"
+#include "dsp3D_geometry.h"
 #include "metamask.h"
 #include "suzanne.h"
 #include <assert.h>
@@ -211,8 +212,35 @@ static void test_viewport_stride_and_scale(void) {
         for (unsigned x = 0; x < 6; x++)
             assert(output[y * 6 + x] == (x < 4 ? source[(y / 2) * 3 + x / 2] : 55));
 }
+static void test_geometry_utilities(void) {
+    dsp3d_bounds b;
+    dsp3d_vec3 normals[968];
+    dsp3d_compact_vertex packed[505];
+    dsp3d_vertex decoded[505];
+    assert(dsp3d_prepare_mesh(&suzanne, normals, &b) == DSP3D_OK);
+    assert(b.radius > 0);
+    assert(dsp3d_pack_vertices(&suzanne, packed, 505, &b) == DSP3D_OK);
+    assert(dsp3d_unpack_vertices(packed, 505, &b, decoded, 505) == DSP3D_OK);
+    for (unsigned i = 0; i < 505; i++) {
+        assert(fabsf(decoded[i].position.x - suzanne.vertices[i].position.x) < 0.0001f);
+        assert(fabsf(decoded[i].position.y - suzanne.vertices[i].position.y) < 0.0001f);
+        assert(fabsf(decoded[i].position.z - suzanne.vertices[i].position.z) < 0.0001f);
+    }
+    dsp3d_lod levels[] = {{&suzanne, 0}, {&metamask, 5}};
+    assert(dsp3d_select_lod(levels, 2, 3) == &suzanne);
+    assert(dsp3d_select_lod(levels, 2, 8) == &metamask);
+    dsp3d_quality q;
+    dsp3d_quality_init(&q, 33333);
+    for (unsigned i = 0; i < 40; i++)
+        dsp3d_quality_update(&q, 60000);
+    assert(q.divisor == 2);
+    for (unsigned i = 0; i < 80; i++)
+        dsp3d_quality_update(&q, 1000);
+    assert(q.divisor == 1);
+}
 int main(void) {
     test_viewport_stride_and_scale();
+    test_geometry_utilities();
     test_models();
     test_depth_and_culling();
     test_clipping_and_normals();
