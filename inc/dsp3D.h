@@ -80,6 +80,7 @@ typedef struct {
     uint16_t palette_cache[3][256];
     uint32_t palette_keys[4];
     uint8_t palette_mask, palette_next;
+    uint8_t material_pass; /* 0 all, 1 opaque, 2 alpha */
 } dsp3d_context;
 /* No allocation, global renderer state, HAL, or display dependency. */
 dsp3d_result dsp3d_init(dsp3d_context *ctx, uint32_t width, uint32_t height, uint16_t *color,

@@ -600,6 +600,10 @@ static dsp3d_result draw_internal(dsp3d_context *c, const dsp3d_mesh *m, const d
             if (!material->opacity)
                 continue;
         }
+        int transparent = material && (material->opacity < 255 ||
+                                       (material->texture && material->texture->alpha));
+        if ((c->material_pass == 1 && transparent) || (c->material_pass == 2 && !transparent))
+            continue;
         cv buffers[2][12];
         int n = 3, src = 0;
         for (int j = 0; j < 3; j++)

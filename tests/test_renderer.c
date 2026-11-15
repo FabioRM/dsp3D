@@ -3,6 +3,7 @@
 #include "dsp3D_geometry.h"
 #include "dsp3D_math.h"
 #include "dsp3D_material.h"
+#include "dsp3D_scene.h"
 #include "metamask.h"
 #include "suzanne.h"
 #include <assert.h>
@@ -306,11 +307,62 @@ static void test_materials_and_bounds(void) {
     assert(dsp3d_planar_shadow(&mesh, &world, (dsp3d_vec3){1, 2, 1}, -2, shadow, 3) == DSP3D_OK);
     assert(fabsf(shadow[0].position.y + 1.998f) < 0.0001f);
 }
+static void test_scene_animation_and_skin(void) {
+    dsp3d_node nodes[2] = {0};
+    for (unsigned i = 0; i < 2; i++) {
+        nodes[i].parent = i ? 0 : -1;
+        nodes[i].mesh_id = UINT32_MAX;
+        nodes[i].scale = (dsp3d_vec3){1, 1, 1};
+        nodes[i].rotation.w = 1;
+        nodes[i].visible = 1;
+    }
+    nodes[0].translation.x = 1;
+    nodes[1].translation.y = 2;
+    dsp3d_scene scene = {nodes, 2};
+    assert(dsp3d_scene_update(&scene) == DSP3D_OK);
+    assert(nodes[1].world.m[3] == 1 && nodes[1].world.m[7] == 2);
+    nodes[0].parent = 1;
+    assert(dsp3d_scene_update(&scene) == DSP3D_INVALID_MODEL);
+    nodes[0].parent = -1;
+    dsp3d_keyframe keys[2] = {{0, {0, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}},
+                              {2, {2, 0, 0}, {0, 0, 0, 1}, {1, 1, 1}}};
+    dsp3d_track track = {0, 0, 2, 0};
+    dsp3d_animation animation = {&track, keys, 1, 2, 2, 1};
+    assert(dsp3d_scene_animate(&scene, &animation, 1) == DSP3D_OK);
+    assert(nodes[0].translation.x == 1);
+    uint8_t bytes[512];
+    size_t written;
+    assert(dsp3d_scene_write(&scene, &animation, bytes, sizeof(bytes), &written) == DSP3D_OK);
+    dsp3d_node loaded_nodes[2];
+    dsp3d_track loaded_tracks[1];
+    dsp3d_keyframe loaded_keys[2];
+    dsp3d_scene loaded = {loaded_nodes, 0};
+    dsp3d_animation anim = {loaded_tracks, loaded_keys, 0, 0, 0, 0};
+    assert(dsp3d_scene_read(bytes, written, &loaded, 2, &anim, 1, 2, NULL, 0) == DSP3D_OK);
+    assert(dsp3d_scene_animate(&loaded, &anim, 1) == DSP3D_OK);
+    assert(loaded.nodes[1].world.m[3] == 1);
+    bytes[written - 1] ^= 1;
+    assert(dsp3d_scene_read(bytes, written, &loaded, 2, &anim, 1, 2, NULL, 0) ==
+           DSP3D_CHECKSUM_ERROR);
+    uint32_t joints[] = {0, 1};
+    dsp3d_mat4 bind[2] = {dsp3d_identity(), dsp3d_identity()}, identity_matrix = dsp3d_identity();
+    dsp3d_joint_palette palette[2];
+    assert(dsp3d_skin_palette(&scene, joints, bind, 2, &identity_matrix, palette) == DSP3D_OK);
+    dsp3d_vertex source = {{0, 0, 0}, {0, 0, 1}}, destination;
+    dsp3d_skin_vertex weight = {{0, 1, 0, 0}, {0.25f, 0.75f, 0, 0}};
+    assert(dsp3d_skin_vertices(&source, &weight, 1, palette, 2, &destination, 1) == DSP3D_OK);
+    assert(fabsf(destination.position.x - 1) < 0.0001f &&
+           fabsf(destination.position.y - 1.5f) < 0.0001f);
+    weight.joints[1] = 3;
+    assert(dsp3d_skin_vertices(&source, &weight, 1, palette, 2, &destination, 1) ==
+           DSP3D_INVALID_MODEL);
+}
 int main(void) {
     test_viewport_stride_and_scale();
     test_geometry_utilities();
     test_camera_and_matrices();
     test_materials_and_bounds();
+    test_scene_animation_and_skin();
     test_models();
     test_depth_and_culling();
     test_clipping_and_normals();
