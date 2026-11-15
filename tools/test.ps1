@@ -19,6 +19,10 @@ try {
     if($LASTEXITCODE){throw 'Asset test compilation failed'}
     & $python tests/test_assets.py
     if($LASTEXITCODE){throw 'Extended asset tests failed'}
+    & $gcc @flags @core tests/test_scene_asset.c -lm -o build/native/scene-asset-tests.exe
+    if($LASTEXITCODE){throw 'Scene asset test compilation failed'}
+    & $python tests/test_importers.py
+    if($LASTEXITCODE){throw 'Importer tests failed'}
     & $python tests/test_converter.py
     if($LASTEXITCODE){throw 'Converter tests failed'}
     & $gcc @flags @core -Iexamples/scenes examples/desktop/preview.c examples/scenes/scenes.c -lm -o build/native/preview.exe

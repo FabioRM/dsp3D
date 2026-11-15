@@ -168,8 +168,8 @@ def encode(mesh, compact=False, with_thumbnail=True):
         body += values
         body += b'\0'*(-len(body) % 4)
     payload = bytes(directory+body)
-    return struct.pack('<4s7I8f', b'DSP3', 2, 64+len(payload), zlib.crc32(payload), nv, nf, len(chunks), 0,
-                       *lo, *hi, 0, 0)[:56] + struct.pack('<2I', 32 if with_thumbnail else 0, 32 if with_thumbnail else 0) + payload
+    return struct.pack('<4s7I6f2I', b'DSP3', 2, 64+len(payload), zlib.crc32(payload), nv, nf, len(chunks), 0,
+                       *lo, *hi, 32 if with_thumbnail else 0, 32 if with_thumbnail else 0) + payload
 
 
 def cluster_lod(mesh, grid):
@@ -244,11 +244,21 @@ def main():
     parser.add_argument('--symbol', default='asset')
     args = parser.parse_args()
     try:
-        if args.input.suffix.lower() != '.stl':
-            raise ValueError('This entry point currently expects STL')
-        v, f, _, _ = convert_model.convert(args.input, args.crease, args.color)
-        mesh = Mesh(v, f)
-        print(json.dumps(save(mesh, args.output, args.compact, args.c_dir, args.symbol), indent=2))
+        suffix = args.input.suffix.lower()
+        if suffix == '.stl':
+            v, f, _, _ = convert_model.convert(args.input, args.crease, args.color)
+            mesh = Mesh(v, f)
+        elif suffix == '.obj':
+            from import_models import obj
+            mesh = obj(args.input)
+        elif suffix in ('.gltf', '.glb'):
+            from import_models import Gltf
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            mesh = Gltf(args.input).export(args.output, args.compact, args.c_dir, args.symbol)
+        else:
+            raise ValueError('Expected STL, OBJ, glTF or GLB')
+        if suffix not in ('.gltf', '.glb'):
+            print(json.dumps(save(mesh, args.output, args.compact, args.c_dir, args.symbol), indent=2))
         previous = mesh
         for i in range(args.lods):
             target = len(mesh.triangles)/(2**(i+1))
@@ -258,7 +268,7 @@ def main():
                 break
             previous = min(candidates, key=lambda m: abs(len(m.triangles)-target))
             save(previous, args.output.with_stem(args.output.stem+f'-lod{i+1}'), args.compact)
-    except (OSError, ValueError, struct.error) as exc:
+    except (OSError, ValueError, KeyError, IndexError, TypeError, ZeroDivisionError, struct.error) as exc:
         parser.exit(1, f'Asset conversion failed: {exc}\n')
 
 

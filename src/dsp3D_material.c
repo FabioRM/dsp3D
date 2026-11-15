@@ -35,7 +35,7 @@ dsp3d_result dsp3d_validate_geometry(const dsp3d_geometry *g) {
     for (uint32_t i = 0; i < g->material_count; i++) {
         const dsp3d_material *m = g->materials + i;
         if (!isfinite(m->specular) || m->specular < 0 || m->specular > 1 ||
-            !isfinite(m->emissive) || m->emissive < 0 || m->emissive > 1 || (m->flags & ~3u))
+            !isfinite(m->emissive) || m->emissive < 0 || m->emissive > 1 || (m->flags & ~7u))
             return DSP3D_INVALID_MODEL;
         if (m->texture) {
             const dsp3d_texture *t = m->texture;

@@ -14,7 +14,8 @@ typedef struct {
     uint32_t width, height, stride;
     uint8_t repeat;
 } dsp3d_texture;
-enum { DSP3D_MATERIAL_UNLIT = 1u, DSP3D_MATERIAL_FACE_COLOR = 2u };
+enum { DSP3D_MATERIAL_UNLIT = 1u, DSP3D_MATERIAL_FACE_COLOR = 2u,
+       DSP3D_MATERIAL_DOUBLE_SIDED = 4u };
 typedef struct {
     uint32_t color;
     const dsp3d_texture *texture;

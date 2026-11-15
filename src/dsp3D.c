@@ -344,7 +344,7 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
     int32_t area = edge_fixed(ax, ay, bx, by, dx, dy);
     if (!area)
         return;
-    if (c->backface_culling && area >= 0)
+    if (c->backface_culling && !(material && (material->flags & DSP3D_MATERIAL_DOUBLE_SIDED)) && area >= 0)
         return;
     c->stats.rasterized_triangles++;
     if (mode == DSP3D_WIREFRAME) {
@@ -608,7 +608,7 @@ static dsp3d_result draw_internal(dsp3d_context *c, const dsp3d_mesh *m, const d
         int n = 3, src = 0;
         for (int j = 0; j < 3; j++)
             buffers[0][j] = c->scratch[f->index[j]];
-        if (c->backface_culling) {
+        if (c->backface_culling && !(material && (material->flags & DSP3D_MATERIAL_DOUBLE_SIDED))) {
             cv a = buffers[0][0], b = buffers[0][1], d = buffers[0][2];
             float facing = a.x * (b.y * d.z - b.z * d.y) + a.y * (b.z * d.x - b.x * d.z) +
                            a.z * (b.x * d.y - b.y * d.x);

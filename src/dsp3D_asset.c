@@ -162,7 +162,7 @@ dsp3d_result dsp3d_asset_open(const void *data, size_t size, void *workspace, si
             const uint8_t *v = materials.data + i * 32;
             uint32_t texture = rd(v + 4), opacity = rd(v + 16), flags = rd(v + 20);
             if ((texture != UINT32_MAX && texture >= candidate.texture_count) || opacity > 255 ||
-                flags > 3 || rd(v + 24) || rd(v + 28))
+                flags > 7 || rd(v + 24) || rd(v + 28))
                 return DSP3D_INVALID_MODEL;
             m[i] = (dsp3d_material){rd(v),
                                     texture == UINT32_MAX ? NULL : textures + texture,

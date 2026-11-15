@@ -46,6 +46,18 @@ static int transparent(const dsp3d_geometry *g) {
             return 1;
     return 0;
 }
+static int visible(const dsp3d_scene *s, uint32_t i) {
+    for (uint32_t visited = 0; visited < s->count; visited++) {
+        if (!s->nodes[i].visible)
+            return 0;
+        if (s->nodes[i].parent < 0)
+            return 1;
+        i = (uint32_t)s->nodes[i].parent;
+        if (i >= s->count)
+            return 0;
+    }
+    return 0;
+}
 dsp3d_result dsp3d_scene_render(dsp3d_context *c, dsp3d_scene *s, dsp3d_mode mode) {
     if (!c)
         return DSP3D_INVALID_ARGUMENT;
@@ -59,7 +71,7 @@ dsp3d_result dsp3d_scene_render(dsp3d_context *c, dsp3d_scene *s, dsp3d_mode mod
     dsp3d_vec3 forward = dsp3d_vunit(dsp3d_vsub(c->camera.target, c->camera.eye));
     for (uint32_t i = 0; i < s->count; i++) {
         dsp3d_node *n = s->nodes + i;
-        if (!n->visible || !n->geometry)
+        if (!visible(s, i) || !n->geometry)
             continue;
         r = dsp3d_draw_matrix(c, n->geometry, &n->world, mode);
         if (r != DSP3D_OK)
@@ -143,7 +155,7 @@ dsp3d_result dsp3d_scene_pick(const dsp3d_context *c, const dsp3d_scene *s, floa
     hit->distance = INFINITY;
     hit->triangle = UINT32_MAX;
     for (uint32_t i = 0; i < s->count; i++)
-        if (s->nodes[i].visible && s->nodes[i].geometry) {
+        if (visible(s, i) && s->nodes[i].geometry) {
             dsp3d_hit candidate;
             dsp3d_result r =
                 dsp3d_pick_mesh(&c->camera, c->viewport, x, y, &s->nodes[i].geometry->mesh,
