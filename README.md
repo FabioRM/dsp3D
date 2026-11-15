@@ -21,6 +21,10 @@ microSD model browser, drag rotation, pinch/button zoom, automatic rotation,
 culling controls, render-mode selection, FPS, and DWT cycle measurements. The
 user button switches between embedded models. The demo works without a card.
 
+The F769 viewer uses 64-pixel-high touch bars, 24-pixel tab text, 20-pixel
+control/list text and 56-pixel model rows. Status messages wrap onto two lines.
+The F746 retains the compact layout for its smaller display.
+
 ![Actual STM32F746 display output](docs/images/f746-suzanne.png)
 
 MicroSD loading is implemented, including CRC/index/length validation and
@@ -181,6 +185,9 @@ provides a window-system-independent reference renderer and benchmark.
 describe memory ownership, caches, clocks, and port differences.
 
 ## History and license
+
+Planned capabilities and current gaps are described in the
+[prioritized roadmap](docs/ROADMAP.md).
 
 The original 2016 engine, low-level template, and Blender exporter are preserved
 in `legacy/`. The v2 typed API is a source-level change; migration is documented.

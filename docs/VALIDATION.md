@@ -1,6 +1,6 @@
 # Validation record
 
-Development and validation date: 15 November 2026 (Europe/Rome).
+Development and validation dates: 15-16 November 2026 (Europe/Rome).
 
 ## Passed
 
@@ -51,6 +51,21 @@ Development and validation date: 15 November 2026 (Europe/Rome).
 - The supplied Windows native GCC distribution does not include the sanitizer
   runtime/spec files, so an attempted UBSan build was unavailable. Guard-buffer,
   exact coverage and deterministic stress tests passed without a sanitizer.
+
+## F769 touch layout update (16 November)
+
+- F769 tabs and bottom controls now occupy 64-pixel-high touch areas. Tab text
+  uses Font24, controls and file rows Font20, and metadata/status Font16.
+- SD rows are 56 pixels high; filenames are shortened with ellipses and status
+  text wraps across two lines. Four rows fit per F769 browser page.
+- Hit areas follow the layout constants, status text is not interactive, and
+  object gestures must start in the 3D area instead of a toolbar.
+- Both F769 and F746 firmware compile. The F769 firmware was flashed through
+  J-Link, boot/SDRAM/frame activity checked on COM15, and the owner confirmed
+  that the new controls are comfortably sized.
+- Native visual checks reused the firmware UI code and BSP fonts for the model
+  view, a populated browser with a long filename, and absent-card messaging.
+  Those previews use illustrative counters, not new performance measurements.
 
 ## Hardware captures
 

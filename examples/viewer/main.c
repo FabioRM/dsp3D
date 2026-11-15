@@ -9,8 +9,30 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#ifdef BOARD_F769
+#define TOP 64
+#define CONTROLS 64
+#define STATUS_HEIGHT 40
+#define INFO_HEIGHT 32
+#define LIST_HEADER 40
+#define LIST_ROW 56
+#define TAB_FONT Font24
+#define CONTROL_FONT Font20
+#define BODY_FONT Font16
+#define FILE_FONT Font20
+#else
 #define TOP 30
-#define BOTTOM 46
+#define CONTROLS 29
+#define STATUS_HEIGHT 17
+#define INFO_HEIGHT 17
+#define LIST_HEADER 25
+#define LIST_ROW 28
+#define TAB_FONT Font12
+#define CONTROL_FONT Font12
+#define BODY_FONT Font12
+#define FILE_FONT Font12
+#endif
+#define BOTTOM (CONTROLS + STATUS_HEIGHT)
 #define FILE_LIMIT 32
 static dsp3d_context renderer;
 static const dsp3d_mesh *current = &metamask;
@@ -31,10 +53,11 @@ static void rect(int x, int y, int w, int h, uint32_t rgb) {
             if (i >= 0 && j >= 0)
                 renderer.color[j * BOARD_WIDTH + i] = color;
 }
-static void text(int x, int y, const char *s, uint32_t rgb) {
+static void text_font(int x, int y, const char *s, uint32_t rgb, const sFONT *font, int right) {
     uint16_t color = dsp3d_rgb565(rgb);
-    sFONT *font = &Font12;
-    while (*s && x + (int)font->Width <= (int)BOARD_WIDTH) {
+    if (right > (int)BOARD_WIDTH)
+        right = BOARD_WIDTH;
+    while (*s && x + (int)font->Width <= right) {
         unsigned ch = (unsigned char)*s++;
         if (ch < 32 || ch > 126)
             ch = '?';
@@ -49,6 +72,51 @@ static void text(int x, int y, const char *s, uint32_t rgb) {
         x += font->Width;
     }
 }
+static void text(int x, int y, const char *s, uint32_t rgb) {
+    text_font(x, y, s, rgb, &BODY_FONT, BOARD_WIDTH);
+}
+static void button(unsigned column, unsigned columns, int y, int height, const char *label,
+                   uint32_t accent, int active, const sFONT *font) {
+    int left = (int)(column * BOARD_WIDTH / columns);
+    int right = (int)((column + 1) * BOARD_WIDTH / columns);
+#ifdef BOARD_F769
+    int x = left + 5, width = right - left - 10;
+    rect(x, y + 5, width, height - 10, active ? accent : 0x36516c);
+    rect(x + 2, y + 7, width - 4, height - 14, active ? 0x274868 : 0x1c334b);
+    unsigned length = (unsigned)strlen(label);
+    int text_x = x + (width - (int)(length * font->Width)) / 2;
+    text_font(text_x, y + (height - font->Height) / 2, label, accent, font, right - 7);
+#else
+    (void)active;
+    text_font(left + 8, y + (height - font->Height) / 2, label, accent, font, right - 2);
+#endif
+}
+static void status_text(void) {
+#ifdef BOARD_F769
+    /* Wrap status messages rather than shrinking the font or hiding their ending. */
+    const unsigned capacity = (BOARD_WIDTH - 24) / BODY_FONT.Width;
+    const char *remaining = status;
+    for (unsigned row = 0; row < 2 && *remaining; row++) {
+        unsigned count = (unsigned)strlen(remaining);
+        if (count > capacity) {
+            count = capacity;
+            while (count && remaining[count] != ' ')
+                count--;
+            if (!count)
+                count = capacity;
+        }
+        char line[96];
+        memcpy(line, remaining, count);
+        line[count] = 0;
+        text(12, BOARD_HEIGHT - STATUS_HEIGHT + 3 + (int)row * 18, line, 0xb7cce0);
+        remaining += count;
+        while (*remaining == ' ')
+            remaining++;
+    }
+#else
+    text(6, BOARD_HEIGHT - STATUS_HEIGHT, status, 0xaabdd1);
+#endif
+}
 static void embedded(unsigned n) {
     current = n ? &suzanne : &metamask;
     snprintf(model_name, sizeof(model_name), "%s", n ? "Suzanne" : "MetaMask Fox");
@@ -58,7 +126,7 @@ static void embedded(unsigned n) {
     snprintf(status, sizeof(status), "Embedded asset | Drag to rotate | Pinch or +/- to zoom");
 }
 static unsigned rows(void) {
-    return (BOARD_HEIGHT - TOP - BOTTOM - 25) / 28;
+    return (BOARD_HEIGHT - TOP - BOTTOM - LIST_HEADER) / LIST_ROW;
 }
 static void scan(void) {
     file_count = page = 0;
@@ -213,6 +281,8 @@ static void command(int ch) {
     }
 }
 static void tap(unsigned x, unsigned y) {
+    if (x >= BOARD_WIDTH || y >= BOARD_HEIGHT)
+        return;
     if (y < TOP) {
         if (x < BOARD_WIDTH / 3)
             embedded(0);
@@ -223,7 +293,7 @@ static void tap(unsigned x, unsigned y) {
         return;
     }
     if (browser) {
-        if (y >= BOARD_HEIGHT - BOTTOM) {
+        if (y >= BOARD_HEIGHT - BOTTOM && y < BOARD_HEIGHT - STATUS_HEIGHT) {
             if (x < BOARD_WIDTH / 3) {
                 if (page)
                     page--;
@@ -232,15 +302,15 @@ static void tap(unsigned x, unsigned y) {
                     page++;
             } else
                 scan();
-        } else if (y >= TOP + 25) {
-            unsigned row = (y - TOP - 25) / 28;
+        } else if (y >= TOP + LIST_HEADER && y < BOARD_HEIGHT - BOTTOM) {
+            unsigned row = (y - TOP - LIST_HEADER) / LIST_ROW;
             if (row < rows())
                 load(page * rows() + row);
         }
         return;
     }
-    if (y >= BOARD_HEIGHT - BOTTOM) {
-        unsigned cell = x / (BOARD_WIDTH / 5);
+    if (y >= BOARD_HEIGHT - BOTTOM && y < BOARD_HEIGHT - STATUS_HEIGHT) {
+        unsigned cell = x * 5 / BOARD_WIDTH;
         if (cell == 0)
             command('m');
         else if (cell == 1)
@@ -255,35 +325,45 @@ static void tap(unsigned x, unsigned y) {
 }
 static void ui(unsigned render_us, unsigned fps10) {
     rect(0, 0, BOARD_WIDTH, TOP, 0x14253b);
-    text(10, 9, "MetaMask Fox", 0xffbb64);
-    text(BOARD_WIDTH / 3 + 10, 9, "Suzanne", 0x91d1ff);
-    text(BOARD_WIDTH * 2 / 3 + 10, 9, "SD Models", 0xb0f0bc);
+    button(0, 3, 0, TOP, "MetaMask Fox", 0xffbb64, !browser && current == &metamask, &TAB_FONT);
+    button(1, 3, 0, TOP, "Suzanne", 0x91d1ff, !browser && current == &suzanne, &TAB_FONT);
+    button(2, 3, 0, TOP, "SD Models", 0xb0f0bc, browser, &TAB_FONT);
     rect(0, BOARD_HEIGHT - BOTTOM, BOARD_WIDTH, BOTTOM, 0x14253b);
     char line[100];
     if (browser) {
         rect(0, TOP, BOARD_WIDTH, BOARD_HEIGHT - TOP - BOTTOM, 0x0b1423);
-        text(12, TOP + 6, "MICROSD /models - read only", 0xffffff);
         for (unsigned i = 0; i < rows() && page * rows() + i < file_count; i++) {
-            int y = TOP + 25 + (int)i * 28;
-            rect(8, y, BOARD_WIDTH - 16, 25, 0x1d334b);
-            text(16, y + 6, names[page * rows() + i], 0xffffff);
+            int y = TOP + LIST_HEADER + (int)i * LIST_ROW;
+            rect(8, y + 2, BOARD_WIDTH - 16, LIST_ROW - 4, 0x1d334b);
+            char label[64];
+            snprintf(label, sizeof(label), "%s", names[page * rows() + i]);
+            unsigned capacity = (BOARD_WIDTH - 40) / FILE_FONT.Width;
+            if (strlen(label) > capacity && capacity > 3) {
+                memcpy(label + capacity - 3, "...", 4);
+            }
+            text_font(20, y + (LIST_ROW - FILE_FONT.Height) / 2, label, 0xffffff, &FILE_FONT,
+                      BOARD_WIDTH - 20);
         }
-        snprintf(line, sizeof(line), "Previous          Next          Refresh   Page %u", page + 1);
-        text(10, BOARD_HEIGHT - BOTTOM + 8, line, 0xffffff);
+        snprintf(line, sizeof(line), "MICROSD /models | Page %u", page + 1);
+        rect(0, TOP, BOARD_WIDTH, LIST_HEADER, 0x0b1423);
+        text(12, TOP + (LIST_HEADER - BODY_FONT.Height) / 2, line, 0xffffff);
+        button(0, 3, BOARD_HEIGHT - BOTTOM, CONTROLS, "Previous", 0xffffff, 0, &CONTROL_FONT);
+        button(1, 3, BOARD_HEIGHT - BOTTOM, CONTROLS, "Next", 0xffffff, 0, &CONTROL_FONT);
+        button(2, 3, BOARD_HEIGHT - BOTTOM, CONTROLS, "Refresh", 0xffffff, 0, &CONTROL_FONT);
     } else {
-        unsigned cell = BOARD_WIDTH / 5;
-        text(8, BOARD_HEIGHT - BOTTOM + 6, modes[mode], 0xffffff);
-        text(cell + 4, BOARD_HEIGHT - BOTTOM + 6, autorotate ? "Pause" : "Rotate", 0xffffff);
-        text(cell * 2 + 8, BOARD_HEIGHT - BOTTOM + 6, "Zoom -", 0xffffff);
-        text(cell * 3 + 8, BOARD_HEIGHT - BOTTOM + 6, "Zoom +", 0xffffff);
-        text(cell * 4 + 4, BOARD_HEIGHT - BOTTOM + 6,
-             renderer.backface_culling ? "Cull ON" : "Cull OFF", 0xffffff);
+        button(0, 5, BOARD_HEIGHT - BOTTOM, CONTROLS, modes[mode], 0xffffff, 0, &CONTROL_FONT);
+        button(1, 5, BOARD_HEIGHT - BOTTOM, CONTROLS, autorotate ? "Pause" : "Rotate", 0xffffff, 0,
+               &CONTROL_FONT);
+        button(2, 5, BOARD_HEIGHT - BOTTOM, CONTROLS, "Zoom -", 0xffffff, 0, &CONTROL_FONT);
+        button(3, 5, BOARD_HEIGHT - BOTTOM, CONTROLS, "Zoom +", 0xffffff, 0, &CONTROL_FONT);
+        button(4, 5, BOARD_HEIGHT - BOTTOM, CONTROLS,
+               renderer.backface_culling ? "Cull ON" : "Cull OFF", 0xffffff, 0, &CONTROL_FONT);
         snprintf(line, sizeof(line), "%s | %lu tris | %u.%u FPS | render %u us", model_name,
                  (unsigned long)current->triangle_count, fps10 / 10, fps10 % 10, render_us);
-        rect(0, TOP, BOARD_WIDTH, 17, 0x0b1423);
-        text(6, TOP + 2, line, 0xc6d8eb);
+        rect(0, TOP, BOARD_WIDTH, INFO_HEIGHT, 0x0b1423);
+        text(6, TOP + (INFO_HEIGHT - BODY_FONT.Height) / 2, line, 0xc6d8eb);
     }
-    text(6, BOARD_HEIGHT - 17, status, 0xaabdd1);
+    status_text();
 }
 int main(void) {
     board_init();
@@ -293,7 +373,7 @@ int main(void) {
     uint32_t last = HAL_GetTick(), last_log = last, last_frame = last;
     unsigned fps10 = 0;
     TS_StateTypeDef touch = {0};
-    unsigned previous_touch = 0, previous_button = 0;
+    unsigned previous_touch = 0, previous_button = 0, gesture_active = 0;
     int previous_x = 0, previous_y = 0;
     float previous_span = 0;
     board_log("Controls: 1/2 model, m mode, r rotate, +/- zoom, c culling, s SD browser.\r\n");
@@ -318,10 +398,13 @@ int main(void) {
             unsigned down = touch.touchDetected;
             if (down) {
                 int x = touch.touchX[0], y = touch.touchY[0];
-                if (!previous_touch)
+                if (!previous_touch) {
+                    gesture_active =
+                        !browser && y >= TOP + INFO_HEIGHT && y < (int)BOARD_HEIGHT - BOTTOM;
                     tap((unsigned)x, (unsigned)y);
-                else if (!browser && y > TOP + 17 && y < (int)BOARD_HEIGHT - BOTTOM &&
-                         previous_y > TOP + 17 && previous_y < (int)BOARD_HEIGHT - BOTTOM) {
+                } else if (gesture_active && !browser && y >= TOP + INFO_HEIGHT &&
+                           y < (int)BOARD_HEIGHT - BOTTOM && previous_y >= TOP + INFO_HEIGHT &&
+                           previous_y < (int)BOARD_HEIGHT - BOTTOM) {
                     if (down == 1) {
                         transform.rotation.y += (float)(x - previous_x) * 0.012f;
                         transform.rotation.x += (float)(y - previous_y) * 0.012f;
