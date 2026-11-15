@@ -1,0 +1,12 @@
+{
+  "source": "suzanne.stl",
+  "source_sha256": "bac920b489a6840588c2e14de8bf3301881b81b20e8d76dfc313859864e546c3",
+  "source_triangles": 968,
+  "triangles": 968,
+  "vertices": 1143,
+  "removed_degenerate": 0,
+  "bytes": 42952,
+  "crease_degrees": 65.0,
+  "color": "79b8e8",
+  "z_up_to_y_up": true
+}

@@ -1,5 +1,6 @@
 /*****************************************************************************
-Copyright (c) 2016 - Fabio Angeletti
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2016-2026 - Fabio Angeletti
 e-mail: fabio.angeletti89@gmail.com
 All rights reserved.
 

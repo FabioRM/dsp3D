@@ -1,0 +1,12 @@
+{
+  "source": "metamask.stl",
+  "source_sha256": "03b9c3f0302c81ac453ddd89bc6dc3856c39aa63bd4496d9c1cd7a479286d52d",
+  "source_triangles": 188,
+  "triangles": 188,
+  "vertices": 521,
+  "removed_degenerate": 0,
+  "bytes": 15544,
+  "crease_degrees": 0.0,
+  "color": "ed8a28",
+  "z_up_to_y_up": true
+}
