@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2016-2026 Fabio Angeletti
  * The original 2016 implementation is preserved in legacy/. */
-#include "dsp3D.h"
+#include "dsp3D_material.h"
 #include <math.h>
 #include <string.h>
 #define MAX_INT(a, b) ((a) > (b) ? (a) : (b))
@@ -68,15 +68,18 @@ static unsigned intensity(float x) {
     return x <= 0 ? 0u : x >= 255 ? 255u : (unsigned)x;
 #endif
 }
-static void palette(dsp3d_context *c, uint32_t color) {
-    if (c->palette_valid && c->palette_color == color)
-        return;
+static const uint16_t *palette(dsp3d_context *c, uint32_t color) {
+    for (unsigned i = 0; i < 4; i++)
+        if ((c->palette_mask & (1u << i)) && c->palette_keys[i] == color)
+            return i ? c->palette_cache[i - 1] : c->palette;
+    unsigned slot = c->palette_next++ % 4;
+    c->palette_keys[slot] = color;
+    c->palette_mask |= (uint8_t)(1u << slot);
+    uint16_t *p = slot ? c->palette_cache[slot - 1] : c->palette;
     unsigned r = (color >> 16) & 255u, g = (color >> 8) & 255u, b = color & 255u;
     for (unsigned i = 0; i < 256; i++)
-        c->palette[i] =
-            dsp3d_rgb565(((r * i / 255u) << 16) | ((g * i / 255u) << 8) | (b * i / 255u));
-    c->palette_color = color;
-    c->palette_valid = 1;
+        p[i] = dsp3d_rgb565(((r * i / 255u) << 16) | ((g * i / 255u) << 8) | (b * i / 255u));
+    return p;
 }
 dsp3d_result dsp3d_init(dsp3d_context *c, uint32_t w, uint32_t h, uint16_t *color, float *depth,
                         dsp3d_cached_vertex *scratch, uint32_t n) {
@@ -96,6 +99,7 @@ dsp3d_result dsp3d_init(dsp3d_context *c, uint32_t w, uint32_t h, uint16_t *colo
     c->light_direction = normalized((dsp3d_vec3){-0.4f, 0.7f, 1});
     c->ambient = 0.2f;
     c->backface_culling = 1;
+    c->shininess = 32;
     return DSP3D_OK;
 }
 static void clip_bounds(const dsp3d_context *c, uint32_t *x0, uint32_t *y0, uint32_t *x1,
@@ -223,7 +227,7 @@ static void dirty(dsp3d_context *c, unsigned x0, unsigned y0, unsigned x1, unsig
 }
 typedef dsp3d_cached_vertex cv;
 typedef struct {
-    float x, y, z, light;
+    float x, y, z, light, u, v, specular;
 } screen_vertex;
 static float plane(cv v, int p, float kx, float ky, float nz, float fz) {
     switch (p) {
@@ -242,8 +246,13 @@ static float plane(cv v, int p, float kx, float ky, float nz, float fz) {
     }
 }
 static cv mix(cv a, cv b, float t) {
-    return (cv){a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t,
-                a.light + (b.light - a.light) * t};
+    return (cv){a.x + (b.x - a.x) * t,
+                a.y + (b.y - a.y) * t,
+                a.z + (b.z - a.z) * t,
+                a.light + (b.light - a.light) * t,
+                a.u + (b.u - a.u) * t,
+                a.v + (b.v - a.v) * t,
+                a.specular + (b.specular - a.specular) * t};
 }
 static int clip(const cv *in, int n, cv *out, int p, float kx, float ky, float nz, float fz) {
     int count = 0;
@@ -263,7 +272,8 @@ static int clip(const cv *in, int n, cv *out, int p, float kx, float ky, float n
 }
 static screen_vertex project(cv v, float fx, float fy, float hx, float hy) {
     float iz = 1.0f / v.z;
-    return (screen_vertex){hx + v.x * fx * iz, hy - v.y * fy * iz, iz, v.light};
+    return (screen_vertex){hx + v.x * fx * iz, hy - v.y * fy * iz, iz,        v.light,
+                           v.u * iz,           v.v * iz,           v.specular};
 }
 static int32_t edge_fixed(int ax, int ay, int bx, int by, int px, int py) {
 #ifdef DSP3D_CMSIS
@@ -303,8 +313,28 @@ static void line(dsp3d_context *c, screen_vertex a, screen_vertex b, uint16_t co
         pixel(c, (int)(a.x + dx * t), (int)(a.y + dy * t), a.z + (b.z - a.z) * t, color);
     }
 }
+static uint16_t blend565(uint16_t a, uint16_t b, unsigned opacity) {
+    unsigned inv = 255 - opacity;
+    unsigned r = (((a >> 11) * opacity + (b >> 11) * inv) + 127) / 255;
+    unsigned g = ((((a >> 5) & 63) * opacity + ((b >> 5) & 63) * inv) + 127) / 255;
+    unsigned blue = (((a & 31) * opacity + (b & 31) * inv) + 127) / 255;
+    return (uint16_t)((r << 11) | (g << 5) | blue);
+}
+static uint16_t shade_texture(uint16_t tex, uint32_t base, unsigned l) {
+    unsigned r = (tex >> 11) * ((base >> 16) & 255u) * l / 65025u;
+    unsigned g = ((tex >> 5) & 63) * ((base >> 8) & 255u) * l / 65025u;
+    unsigned b = (tex & 31) * (base & 255u) * l / 65025u;
+    return (uint16_t)((r << 11) | (g << 5) | b);
+}
+static float specular_at(dsp3d_vec3 normal, dsp3d_vec3 light, dsp3d_vec3 position,
+                         const dsp3d_context *c) {
+    dsp3d_vec3 view = normalized(sub(c->camera.eye, position));
+    dsp3d_vec3 h = normalized((dsp3d_vec3){view.x + light.x, view.y + light.y, view.z + light.z});
+    return dot(normal, light) > 0 ? 255.0f * powf(fmaxf(0, dot(normal, h)), c->shininess) : 0;
+}
 static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_vertex d,
-                   dsp3d_mode mode, float flat) {
+                   dsp3d_mode mode, float flat, float flat_spec, const dsp3d_material *material,
+                   const uint16_t *shades, uint32_t base) {
     int ax = (int)(fmaxf(0, fminf((float)c->width, a.x)) * 16.0f + 0.5f);
     int ay = (int)(fmaxf(0, fminf((float)c->height, a.y)) * 16.0f + 0.5f);
     int bx = (int)(fmaxf(0, fminf((float)c->width, b.x)) * 16.0f + 0.5f);
@@ -318,7 +348,7 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
         return;
     c->stats.rasterized_triangles++;
     if (mode == DSP3D_WIREFRAME) {
-        uint16_t color = c->palette[255];
+        uint16_t color = shades[255];
         line(c, a, b, color);
         line(c, b, d, color);
         line(c, d, a, color);
@@ -361,20 +391,64 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
     float lrow = ((float)e0 * a.light + (float)e1 * b.light + (float)e2 * d.light) * inv,
           lx = ((float)ex0 * a.light + (float)ex1 * b.light + (float)ex2 * d.light) * inv,
           ly = ((float)ey0 * a.light + (float)ey1 * b.light + (float)ey2 * d.light) * inv;
-    uint16_t flat_color = c->palette[intensity(flat)];
+    uint16_t flat_color = shades[intensity(flat)];
+    const dsp3d_texture *texture = mode == DSP3D_TEXTURED && material ? material->texture : NULL;
+    unsigned opacity = material ? material->opacity : 255;
+    float emission = material ? material->emissive : 0;
+    float spec_scale = material ? fmaxf(material->specular, c->specular) : c->specular;
+    int unlit = material && (material->flags & DSP3D_MATERIAL_UNLIT);
+    float ur = (e0 * a.u + e1 * b.u + e2 * d.u) * inv,
+          ux = (ex0 * a.u + ex1 * b.u + ex2 * d.u) * inv,
+          uy = (ey0 * a.u + ey1 * b.u + ey2 * d.u) * inv;
+    float vr = (e0 * a.v + e1 * b.v + e2 * d.v) * inv,
+          vx = (ex0 * a.v + ex1 * b.v + ex2 * d.v) * inv,
+          vy = (ey0 * a.v + ey1 * b.v + ey2 * d.v) * inv;
+    float sr = (e0 * a.specular + e1 * b.specular + e2 * d.specular) * inv,
+          sx = (ex0 * a.specular + ex1 * b.specular + ex2 * d.specular) * inv,
+          sy = (ey0 * a.specular + ey1 * b.specular + ey2 * d.specular) * inv;
     /* Top-left ownership avoids shading shared edges twice. */
     int tl0 = (dy < by) || (dy == by && dx > bx), tl1 = (ay < dy) || (ay == dy && ax > dx),
         tl2 = (by < ay) || (by == ay && bx > ax);
     for (int y = y0; y <= y1; y++) {
         int32_t w0 = e0, w1 = e1, w2 = e2;
-        float z = zrow, l = lrow;
+        float z = zrow, l = lrow, u = ur, v = vr, spec = sr;
         size_t index = (size_t)y * c->depth_stride + (unsigned)x0;
         size_t color_index = (size_t)y * c->color_stride + (unsigned)x0;
         for (int x = x0; x <= x1; x++, index++, color_index++) {
             if ((w0 > 0 || (w0 == 0 && tl0)) && (w1 > 0 || (w1 == 0 && tl1)) &&
                 (w2 > 0 || (w2 == 0 && tl2)) && z >= c->depth[index]) {
-                c->depth[index] = z;
-                c->color[color_index] = mode == DSP3D_FLAT ? flat_color : c->palette[intensity(l)];
+                uint16_t color;
+                unsigned alpha = opacity;
+                float light_value = unlit ? 255.0f : (mode == DSP3D_FLAT ? flat : l);
+                unsigned lit = intensity(light_value + (255.0f - light_value) * emission);
+                if (texture) {
+                    float reciprocal = 1.0f / z, tu = u * reciprocal, tv = v * reciprocal;
+                    if (texture->repeat) {
+                        tu -= floorf(tu);
+                        tv -= floorf(tv);
+                    }
+                    unsigned tx =
+                        (unsigned)(fmaxf(0, fminf(1, tu)) * (float)(texture->width - 1) + 0.5f);
+                    unsigned ty =
+                        (unsigned)(fmaxf(0, fminf(1, tv)) * (float)(texture->height - 1) + 0.5f);
+                    color = shade_texture(texture->pixels[(size_t)ty * texture->stride + tx], base,
+                                          lit);
+                    if (texture->alpha)
+                        alpha = alpha * texture->alpha[(size_t)ty * texture->width + tx] / 255;
+                } else if (mode == DSP3D_FLAT && !unlit && emission == 0)
+                    color = flat_color;
+                else
+                    color = shades[lit];
+                if (spec_scale > 0) {
+                    unsigned shine =
+                        intensity((mode == DSP3D_FLAT ? flat_spec : spec) * spec_scale);
+                    color = blend565(0xffff, color, shine);
+                }
+                if (alpha == 255) {
+                    c->depth[index] = z;
+                    c->color[color_index] = color;
+                } else if (alpha)
+                    c->color[color_index] = blend565(color, c->color[color_index], alpha);
                 c->stats.shaded_pixels++;
             }
             w0 += ex0;
@@ -382,25 +456,39 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
             w2 += ex2;
             z += zx;
             l += lx;
+            if (texture) {
+                u += ux;
+                v += vx;
+            }
+            if (spec_scale > 0)
+                spec += sx;
         }
         e0 += ey0;
         e1 += ey1;
         e2 += ey2;
         zrow += zy;
         lrow += ly;
+        if (texture) {
+            ur += uy;
+            vr += vy;
+        }
+        if (spec_scale > 0)
+            sr += sy;
     }
 }
-dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_transform *t,
-                        dsp3d_mode mode) {
+static dsp3d_result draw_internal(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_transform *t,
+                                  dsp3d_mode mode, const dsp3d_geometry *geometry,
+                                  const dsp3d_mat4 *world) {
     if (!c || !m || !t || !m->vertices || !m->triangles || !m->vertex_count ||
-        (unsigned)mode > DSP3D_POINTS || !finite3(t->rotation) || !finite3(t->position) ||
+        (unsigned)mode > DSP3D_TEXTURED || !finite3(t->rotation) || !finite3(t->position) ||
         !isfinite(t->scale) || t->scale <= 0 || !finite3(c->camera.eye) ||
         !finite3(c->camera.target) || !finite3(c->camera.up) || !finite3(c->light_direction) ||
         !isfinite(c->ambient) || c->ambient < 0 || c->ambient > 1 ||
         !isfinite(c->camera.vertical_fov) || c->camera.vertical_fov < 0.05f ||
         c->camera.vertical_fov > 3.0f || !isfinite(c->camera.near_plane) ||
         !isfinite(c->camera.far_plane) || c->camera.near_plane <= 0 ||
-        c->camera.far_plane <= c->camera.near_plane)
+        c->camera.far_plane <= c->camera.near_plane || !isfinite(c->specular) || c->specular < 0 ||
+        c->specular > 1 || !isfinite(c->shininess) || c->shininess < 1 || c->shininess > 256)
         return DSP3D_INVALID_ARGUMENT;
     if (m->vertex_count > c->scratch_count)
         return DSP3D_INSUFFICIENT_MEMORY;
@@ -416,17 +504,70 @@ dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_trans
     float fx = (float)c->viewport.width * 0.5f / kx, fy = (float)c->viewport.height * 0.5f / ky;
     float hx = (float)c->viewport.x + (float)c->viewport.width * 0.5f,
           hy = (float)c->viewport.y + (float)c->viewport.height * 0.5f;
+    dsp3d_mat4 inverse = dsp3d_identity(), normal_matrix = dsp3d_identity();
+    if (world) {
+        if (dsp3d_matrix_inverse(world, &inverse) != DSP3D_OK)
+            return DSP3D_INVALID_ARGUMENT;
+        for (unsigned y = 0; y < 3; y++)
+            for (unsigned x = 0; x < 3; x++)
+                normal_matrix.m[y * 4 + x] = inverse.m[x * 4 + y];
+    }
+    int want_spec = c->specular > 0;
+    if (geometry) {
+        for (uint32_t i = 0; i < geometry->material_count; i++)
+            want_spec |= geometry->materials[i].specular > 0;
+        if (geometry->bounds_valid) {
+            dsp3d_vec3 center = world ? dsp3d_matrix_point(world, geometry->bounds.center)
+                                      : rotate(geometry->bounds.center, r);
+            float radius = geometry->bounds.radius * t->scale;
+            if (world) {
+                float sum = 0;
+                for (unsigned y = 0; y < 3; y++)
+                    for (unsigned x = 0; x < 3; x++)
+                        sum += world->m[y * 4 + x] * world->m[y * 4 + x];
+                radius = geometry->bounds.radius * sqrtf(sum);
+            } else
+                center = (dsp3d_vec3){center.x * t->scale + t->position.x,
+                                      center.y * t->scale + t->position.y,
+                                      center.z * t->scale + t->position.z};
+            dsp3d_vec3 delta = sub(center, c->camera.eye);
+            float x = dot(delta, right), y = dot(delta, up), z = dot(delta, forward),
+                  rx = radius * sqrtf(1 + kx * kx), ry = radius * sqrtf(1 + ky * ky);
+            if (z + radius < c->camera.near_plane || z - radius > c->camera.far_plane ||
+                x + kx * z < -rx || kx * z - x < -rx || y + ky * z < -ry || ky * z - y < -ry) {
+                c->stats.rejected_objects++;
+                return DSP3D_OK;
+            }
+        }
+    }
     for (uint32_t i = 0; i < m->vertex_count; i++) {
         dsp3d_vec3 v = rotate(m->vertices[i].position, r);
         v = (dsp3d_vec3){v.x * t->scale + t->position.x, v.y * t->scale + t->position.y,
                          v.z * t->scale + t->position.z};
+        if (world)
+            v = dsp3d_matrix_point(world, m->vertices[i].position);
+        dsp3d_vec3 position_world = v;
         v = sub(v, c->camera.eye);
         float l = 1;
-        if (mode == DSP3D_GOURAUD) {
-            dsp3d_vec3 n = rotate(m->vertices[i].normal, r);
+        if (mode == DSP3D_GOURAUD || mode == DSP3D_TEXTURED || want_spec) {
+            dsp3d_vec3 n =
+                world ? normalized(dsp3d_matrix_vector(&normal_matrix, m->vertices[i].normal))
+                      : rotate(m->vertices[i].normal, r);
             l = c->ambient + (1.0f - c->ambient) * fmaxf(0, dot(n, light));
         }
-        c->scratch[i] = (cv){dot(v, right), dot(v, up), dot(v, forward), l * 255.0f};
+        dsp3d_uv uv = geometry && geometry->uv ? geometry->uv[i] : (dsp3d_uv){0, 0};
+        dsp3d_vec3 normal =
+            want_spec
+                ? (world ? normalized(dsp3d_matrix_vector(&normal_matrix, m->vertices[i].normal))
+                         : rotate(m->vertices[i].normal, r))
+                : (dsp3d_vec3){0, 0, 1};
+        c->scratch[i] = (cv){dot(v, right),
+                             dot(v, up),
+                             dot(v, forward),
+                             l * 255.0f,
+                             uv.u,
+                             uv.v,
+                             want_spec ? specular_at(normal, light, position_world, c) : 0};
         if (!isfinite(c->scratch[i].x) || !isfinite(c->scratch[i].y) || !isfinite(c->scratch[i].z))
             return DSP3D_INVALID_ARGUMENT;
     }
@@ -450,6 +591,15 @@ dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_trans
         if (f->index[0] >= m->vertex_count || f->index[1] >= m->vertex_count ||
             f->index[2] >= m->vertex_count)
             return DSP3D_INVALID_MODEL;
+        const dsp3d_material *material = NULL;
+        if (geometry && geometry->material_count) {
+            uint32_t mi = geometry->material_indices ? geometry->material_indices[i] : 0;
+            if (mi >= geometry->material_count)
+                return DSP3D_INVALID_MODEL;
+            material = geometry->materials + mi;
+            if (!material->opacity)
+                continue;
+        }
         cv buffers[2][12];
         int n = 3, src = 0;
         for (int j = 0; j < 3; j++)
@@ -463,12 +613,26 @@ dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_trans
                 continue;
             }
         }
-        float flat = 255;
+        float flat = 255, flat_spec = 0;
         if (mode == DSP3D_FLAT) {
             dsp3d_vec3 p0 = m->vertices[f->index[0]].position,
                        p1 = m->vertices[f->index[1]].position,
                        p2 = m->vertices[f->index[2]].position;
-            dsp3d_vec3 normal = rotate(normalized(cross(sub(p1, p0), sub(p2, p0))), r);
+            dsp3d_vec3 normal = geometry && geometry->face_normals
+                                    ? geometry->face_normals[i]
+                                    : normalized(cross(sub(p1, p0), sub(p2, p0)));
+            normal =
+                world ? normalized(dsp3d_matrix_vector(&normal_matrix, normal)) : rotate(normal, r);
+            if (want_spec) {
+                dsp3d_vec3 center = {(p0.x + p1.x + p2.x) / 3, (p0.y + p1.y + p2.y) / 3,
+                                     (p0.z + p1.z + p2.z) / 3};
+                center = world ? dsp3d_matrix_point(world, center) : rotate(center, r);
+                if (!world)
+                    center = (dsp3d_vec3){center.x * t->scale + t->position.x,
+                                          center.y * t->scale + t->position.y,
+                                          center.z * t->scale + t->position.z};
+                flat_spec = specular_at(normal, light, center, c);
+            }
             flat = 255.0f * (c->ambient + (1.0f - c->ambient) * fmaxf(0, dot(normal, light)));
         }
         c->stats.submitted_triangles++;
@@ -490,11 +654,34 @@ dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_trans
         }
         if (n < 3)
             continue;
-        palette(c, f->color);
+        uint32_t base =
+            material && !(material->flags & DSP3D_MATERIAL_FACE_COLOR) ? material->color : f->color;
+        if (c->tint_enabled)
+            base = c->tint;
+        const uint16_t *shades = palette(c, base);
         screen_vertex a = project(buffers[src][0], fx, fy, hx, hy);
         for (int j = 1; j < n - 1; j++)
             raster(c, a, project(buffers[src][j], fx, fy, hx, hy),
-                   project(buffers[src][j + 1], fx, fy, hx, hy), mode, flat);
+                   project(buffers[src][j + 1], fx, fy, hx, hy), mode, flat, flat_spec, material,
+                   shades, base);
     }
     return DSP3D_OK;
+}
+
+dsp3d_result dsp3d_draw(dsp3d_context *c, const dsp3d_mesh *m, const dsp3d_transform *t,
+                        dsp3d_mode mode) {
+    return draw_internal(c, m, t, mode, NULL, NULL);
+}
+dsp3d_result dsp3d_draw_geometry(dsp3d_context *c, const dsp3d_geometry *g,
+                                 const dsp3d_transform *t, dsp3d_mode mode) {
+    if (!g)
+        return DSP3D_INVALID_ARGUMENT;
+    return draw_internal(c, &g->mesh, t, mode, g, NULL);
+}
+dsp3d_result dsp3d_draw_matrix(dsp3d_context *c, const dsp3d_geometry *g, const dsp3d_mat4 *world,
+                               dsp3d_mode mode) {
+    if (!g || !world)
+        return DSP3D_INVALID_ARGUMENT;
+    const dsp3d_transform identity = {{0, 0, 0}, {0, 0, 0}, 1};
+    return draw_internal(c, &g->mesh, &identity, mode, g, world);
 }

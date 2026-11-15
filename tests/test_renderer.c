@@ -2,6 +2,7 @@
 #include "dsp3D.h"
 #include "dsp3D_geometry.h"
 #include "dsp3D_math.h"
+#include "dsp3D_material.h"
 #include "metamask.h"
 #include "suzanne.h"
 #include <assert.h>
@@ -265,10 +266,51 @@ static void test_camera_and_matrices(void) {
     dsp3d_camera_pan(&ctx.camera, 1, 0);
     assert(ctx.camera.eye.x == before.x + 1 && ctx.camera.target.x == 1);
 }
+static void test_materials_and_bounds(void) {
+    init();
+    ctx.ambient = 1;
+    const dsp3d_vertex v[] = {
+        {{-1, -1, 0}, {0, 0, 1}}, {{1, -1, 0}, {0, 0, 1}}, {{0, 1, 0}, {0, 0, 1}}};
+    const dsp3d_triangle f[] = {{{0, 1, 2}, 0xff0000}};
+    const dsp3d_mesh mesh = {v, f, 3, 1};
+    dsp3d_geometry g;
+    dsp3d_vec3 normals[1];
+    assert(dsp3d_geometry_init(&g, &mesh, normals) == DSP3D_OK);
+    const uint16_t texels[] = {0x001f, 0x07e0, 0xf800, 0xffff};
+    const dsp3d_texture tex = {texels, NULL, 2, 2, 2, 0};
+    const dsp3d_uv uv[] = {{0, 0}, {0, 0}, {0, 0}};
+    dsp3d_material material = {0xffffff, &tex, 0, 0, 255, 0};
+    g.materials = &material;
+    g.material_count = 1;
+    g.uv = uv;
+    assert(dsp3d_validate_geometry(&g) == DSP3D_OK);
+    assert(dsp3d_draw_geometry(&ctx, &g, &identity, DSP3D_TEXTURED) == DSP3D_OK);
+    assert(color.data[(H / 2) * W + W / 2] == 0x001f);
+    material.texture = NULL;
+    material.color = 0xff0000;
+    material.opacity = 128;
+    dsp3d_begin_frame(&ctx, 0x001f);
+    assert(dsp3d_draw_geometry(&ctx, &g, &identity, DSP3D_FLAT) == DSP3D_OK);
+    uint16_t mixed = color.data[(H / 2) * W + W / 2];
+    assert((mixed >> 11) > 0 && (mixed & 31) > 0);
+    assert(depth.data[(H / 2) * W + W / 2] == 0);
+    dsp3d_begin_frame(&ctx, 0);
+    dsp3d_transform away = identity;
+    away.position.x = 100;
+    assert(dsp3d_draw_geometry(&ctx, &g, &away, DSP3D_TEXTURED) == DSP3D_OK);
+    assert(ctx.stats.rejected_objects == 1 && ctx.stats.transformed_vertices == 0);
+    dsp3d_mat4 world =
+        dsp3d_matrix_trs((dsp3d_vec3){0, 0, 0}, (dsp3d_quat){0, 0, 0, 1}, (dsp3d_vec3){1, 2, 1});
+    assert(dsp3d_draw_matrix(&ctx, &g, &world, DSP3D_GOURAUD) == DSP3D_OK);
+    dsp3d_vertex shadow[3];
+    assert(dsp3d_planar_shadow(&mesh, &world, (dsp3d_vec3){1, 2, 1}, -2, shadow, 3) == DSP3D_OK);
+    assert(fabsf(shadow[0].position.y + 1.998f) < 0.0001f);
+}
 int main(void) {
     test_viewport_stride_and_scale();
     test_geometry_utilities();
     test_camera_and_matrices();
+    test_materials_and_bounds();
     test_models();
     test_depth_and_culling();
     test_clipping_and_normals();

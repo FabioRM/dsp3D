@@ -26,7 +26,13 @@ typedef struct {
     const dsp3d_triangle *triangles;
     uint32_t vertex_count, triangle_count;
 } dsp3d_mesh;
-typedef enum { DSP3D_FLAT, DSP3D_GOURAUD, DSP3D_WIREFRAME, DSP3D_POINTS } dsp3d_mode;
+typedef enum {
+    DSP3D_FLAT,
+    DSP3D_GOURAUD,
+    DSP3D_WIREFRAME,
+    DSP3D_POINTS,
+    DSP3D_TEXTURED
+} dsp3d_mode;
 typedef enum {
     DSP3D_OK,
     DSP3D_INVALID_ARGUMENT,
@@ -44,10 +50,11 @@ typedef struct {
     float scale;
 } dsp3d_transform;
 typedef struct {
-    float x, y, z, light;
+    float x, y, z, light, u, v, specular;
 } dsp3d_cached_vertex;
 typedef struct {
     uint32_t transformed_vertices, submitted_triangles, rasterized_triangles, shaded_pixels;
+    uint32_t rejected_objects;
 } dsp3d_stats;
 typedef struct {
     uint16_t *color; /* RGB565; width pixels per row */
@@ -67,6 +74,12 @@ typedef struct {
     uint32_t dirty_x0, dirty_y0, dirty_x1, dirty_y1;
     uint32_t color_stride, depth_stride; /* elements, not bytes */
     dsp3d_rect viewport, scissor;
+    float specular, shininess;
+    uint32_t tint;
+    uint8_t tint_enabled;
+    uint16_t palette_cache[3][256];
+    uint32_t palette_keys[4];
+    uint8_t palette_mask, palette_next;
 } dsp3d_context;
 /* No allocation, global renderer state, HAL, or display dependency. */
 dsp3d_result dsp3d_init(dsp3d_context *ctx, uint32_t width, uint32_t height, uint16_t *color,
