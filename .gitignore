@@ -3,4 +3,5 @@
 __pycache__/
 *.pyc
 *.ppm
+*.rgb565
 /test-output/

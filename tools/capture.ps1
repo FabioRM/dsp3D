@@ -9,7 +9,7 @@ try {
     New-Item -ItemType Directory -Force (Split-Path $targetPath) | Out-Null
     $rawPath=$targetPath+'.rgb565'
     $dump='set framebuffer [mrw 0x400168ac]; dump_image {'+$rawPath.Replace('\','/')+'} $framebuffer '+($width*$height*2)
-    & tools/local/openocd/bin/openocd.exe -s tools/local/openocd/scripts -f interface/stlink-dap.cfg -f target/stm32f7x.cfg -c 'adapter speed 1800' -c init -c halt -c $dump -c resume -c shutdown
+    & tools/local/openocd/bin/openocd.exe -s tools/local/openocd/scripts -f interface/stlink-dap.cfg -c 'set ENABLE_LOW_POWER 1' -f target/stm32f7x.cfg -c 'adapter speed 1800' -c init -c halt -c $dump -c resume -c shutdown
     if($LASTEXITCODE){throw 'Framebuffer capture failed'}
     & tools/local/python/python.exe tools/rgb565_to_bmp.py $rawPath $targetPath $width $height
     if($LASTEXITCODE){throw 'Framebuffer conversion failed'}

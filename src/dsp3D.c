@@ -229,12 +229,12 @@ static void line(dsp3d_context *c, screen_vertex a, screen_vertex b, uint16_t co
 }
 static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_vertex d,
                    dsp3d_mode mode, float flat) {
-    int ax = (int)lroundf(fmaxf(0, fminf((float)c->width, a.x)) * 16.0f);
-    int ay = (int)lroundf(fmaxf(0, fminf((float)c->height, a.y)) * 16.0f);
-    int bx = (int)lroundf(fmaxf(0, fminf((float)c->width, b.x)) * 16.0f);
-    int by = (int)lroundf(fmaxf(0, fminf((float)c->height, b.y)) * 16.0f);
-    int dx = (int)lroundf(fmaxf(0, fminf((float)c->width, d.x)) * 16.0f);
-    int dy = (int)lroundf(fmaxf(0, fminf((float)c->height, d.y)) * 16.0f);
+    int ax = (int)(fmaxf(0, fminf((float)c->width, a.x)) * 16.0f + 0.5f);
+    int ay = (int)(fmaxf(0, fminf((float)c->height, a.y)) * 16.0f + 0.5f);
+    int bx = (int)(fmaxf(0, fminf((float)c->width, b.x)) * 16.0f + 0.5f);
+    int by = (int)(fmaxf(0, fminf((float)c->height, b.y)) * 16.0f + 0.5f);
+    int dx = (int)(fmaxf(0, fminf((float)c->width, d.x)) * 16.0f + 0.5f);
+    int dy = (int)(fmaxf(0, fminf((float)c->height, d.y)) * 16.0f + 0.5f);
     int32_t area = edge_fixed(ax, ay, bx, by, dx, dy);
     if (!area)
         return;

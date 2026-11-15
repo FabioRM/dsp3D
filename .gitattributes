@@ -1,0 +1,12 @@
+* text=auto
+*.c text eol=lf
+*.h text eol=lf
+*.py text eol=lf
+*.ps1 text eol=lf
+*.md text eol=lf
+*.ld text eol=lf
+*.cmake text eol=lf
+*.stl -text
+*.d3m -text
+*.a -text
+*.png -text

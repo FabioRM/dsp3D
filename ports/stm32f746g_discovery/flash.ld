@@ -17,7 +17,7 @@ SECTIONS {
  .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(SORT(.init_array.*))) KEEP(*(.init_array*)) PROVIDE_HIDDEN(__init_array_end = .); } > FLASH :flash
  .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(SORT(.fini_array.*))) KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); } > FLASH :flash
  _sidata = LOADADDR(.data);
- .data : { . = ALIGN(4); _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } > RAM AT > FLASH :data
+ .data : ALIGN(32) { _sdata = .; *(.data*) . = ALIGN(32); _edata = .; } > RAM AT > FLASH :data
  .bss (NOLOAD) : { . = ALIGN(8); _sbss = .; __bss_start__ = .; *(.bss*) *(COMMON) . = ALIGN(8); _ebss = .; __bss_end__ = .; _end = .; end = .; } > RAM :data
  ASSERT(_end <= _heap_end, "DTCM data overlaps the reserved stack")
  .ARM.attributes 0 : { *(.ARM.attributes) }
