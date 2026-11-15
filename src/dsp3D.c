@@ -138,7 +138,7 @@ static void raster(dsp3d_context *c,screen_vertex a,screen_vertex b,screen_verte
     }
 }
 dsp3d_result dsp3d_draw(dsp3d_context *c,const dsp3d_mesh *m,const dsp3d_transform *t,dsp3d_mode mode){
-    if(!c||!m||!t||!m->vertices||!m->triangles||!m->vertex_count||mode>DSP3D_POINTS||mode<DSP3D_FLAT||
+    if(!c||!m||!t||!m->vertices||!m->triangles||!m->vertex_count||(unsigned)mode>DSP3D_POINTS||
        !finite3(t->rotation)||!finite3(t->position)||!isfinite(t->scale)||t->scale<=0||
        !finite3(c->camera.eye)||!finite3(c->camera.target)||!finite3(c->camera.up)||!finite3(c->light_direction)||
        !isfinite(c->ambient)||c->ambient<0||c->ambient>1||!isfinite(c->camera.vertical_fov)||
