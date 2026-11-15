@@ -28,6 +28,45 @@ transactional model replacement. No microSD was available during development:
 physical SDMMC/card behavior remains unverified. Host model-loader tests and
 the absent-card path are covered separately. See [validation](docs/VALIDATION.md).
 
+## Measured performance
+
+Measured on the **STM32F746G-Discovery at 200 MHz and 480 x 272**, with SDRAM,
+I-cache/D-cache enabled, RGB565 double buffering, and the LCD scanning during
+the benchmark. Each result is the mean of **120 deterministic poses**, timed
+with the on-chip DWT cycle counter. Builds use ARM GNU 14.3.1, `-O3`, hard-float,
+and `-ffp-contract=fast`, without `-ffast-math` or LTO.
+
+All timings below are in **microseconds**. Fox: 188 triangles / 521 vertices;
+Suzanne: 968 triangles / 505 smooth vertices.
+
+| Model | Mode | CMSIS/DSP render | Scalar render | CMSIS/DSP clear |
+| --- | --- | ---: | ---: | ---: |
+| Fox | Flat | 6,449 | 6,431 | 2,667 |
+| Fox | Gouraud | 7,183 | 8,358 | 2,646 |
+| Fox | Wireframe | 3,367 | 3,357 | 2,656 |
+| Fox | Points | 1,048 | 1,045 | 2,661 |
+| Suzanne | Flat | 7,768 | 7,732 | 2,455 |
+| Suzanne | Gouraud | 7,884 | 8,555 | 2,454 |
+| Suzanne | Wireframe | 7,644 | 7,655 | 2,461 |
+| Suzanne | Points | 1,086 | 1,088 | 2,463 |
+
+Render time excludes clearing, UI, serial logging, and presentation/vblank waits.
+Clear time includes DMA2D color fill and dirty-region depth clearing. The
+interactive viewer was observed around **59 FPS in the tested poses**; render-only
+timings are not end-to-end FPS, and results vary with pose, zoom and scene size.
+F769 hardware performance has not been measured.
+
+The DSP backend reduces Gouraud render time by about **14% for the fox** and
+**8% for Suzanne** against the scalar build using the same assets. Other modes
+are close. During v2 optimization, clearing fell from about **7.3 ms to 2.5-2.7 ms**,
+and Suzanne flat rendering from about **11.4 ms to 7.8 ms**. The latter includes
+switching to shared smooth normals; these are not comparisons with the original
+2016 renderer.
+
+See the [full performance report](docs/PERFORMANCE.md) for methodology, optimization
+details and reproduction commands, and the raw [DSP](docs/measurements/f746-dsp.csv)
+and [scalar](docs/measurements/f746-scalar.csv) results for minima and maxima.
+
 ## Build and run on Windows
 
 This supplied working folder contains the SDK, generated assets, and portable
