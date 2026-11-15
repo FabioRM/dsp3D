@@ -15,7 +15,7 @@ spec.loader.exec_module(converter)
 
 class ConversionTests(unittest.TestCase):
     def test_generated_models_are_reproducible(self):
-        for name, crease, color, count in [('metamask', 0, 0xed8a28, 188), ('suzanne', 65, 0x79b8e8, 968)]:
+        for name, crease, color, count in [('metamask', 0, 0xed8a28, 188), ('suzanne', 180, 0x79b8e8, 968)]:
             vertices, faces, blob, report = converter.convert(ROOT / f'assets/source/{name}.stl', crease, color)
             self.assertEqual(blob, (ROOT / f'sdcard/models/{name}.d3m').read_bytes())
             self.assertEqual(len(faces), count)

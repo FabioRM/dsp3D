@@ -36,6 +36,13 @@ static dsp3d_vec3 rotate(dsp3d_vec3 v, const float *r) {
                         v.x * r[6] + v.y * r[7] + v.z * r[8]};
 }
 static void rotation(dsp3d_vec3 a, float *r) {
+    /* Bound the CMSIS lookup's integer range reduction even for large angles. */
+    if (fabsf(a.x) > 6.2831853f)
+        a.x = remainderf(a.x, 6.2831853f);
+    if (fabsf(a.y) > 6.2831853f)
+        a.y = remainderf(a.y, 6.2831853f);
+    if (fabsf(a.z) > 6.2831853f)
+        a.z = remainderf(a.z, 6.2831853f);
     float sx = fast_sin(a.x), cx = fast_cos(a.x), sy = fast_sin(a.y), cy = fast_cos(a.y),
           sz = fast_sin(a.z), cz = fast_cos(a.z);
     /* Rz * Ry * Rx; normals receive rotation only (uniform positive scale). */

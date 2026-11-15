@@ -303,7 +303,7 @@ int main(void) {
         last = now;
         if (dt > 0.1f)
             dt = 0.1f;
-        unsigned button = BSP_PB_GetState(BUTTON_KEY) != RESET;
+        unsigned button = BSP_PB_GetState(BOARD_BUTTON) != RESET;
         if (button && !previous_button)
             embedded(current == &metamask ? 1 : 0);
         previous_button = button;
