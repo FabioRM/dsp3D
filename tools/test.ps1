@@ -23,6 +23,11 @@ try {
     if($LASTEXITCODE){throw 'Scene asset test compilation failed'}
     & $python tests/test_importers.py
     if($LASTEXITCODE){throw 'Importer tests failed'}
+    $gallery=@('examples/scenes/scenes.c','examples/scenes/gallery.c','assets/generated/suzanne_compact.c','assets/generated/suzanne_lod1.c','assets/generated/suzanne_lod2.c')
+    & $gcc @flags @core @gallery -Iexamples/scenes tests/test_gallery.c -lm -o build/native/gallery-tests.exe
+    if($LASTEXITCODE){throw 'Gallery test compilation failed'}
+    & build/native/gallery-tests.exe | Set-Content build/native/gallery-checksums.csv
+    if($LASTEXITCODE){throw 'Gallery regression tests failed'}
     & $python tests/test_converter.py
     if($LASTEXITCODE){throw 'Converter tests failed'}
     & $gcc @flags @core -Iexamples/scenes examples/desktop/preview.c examples/scenes/scenes.c -lm -o build/native/preview.exe
