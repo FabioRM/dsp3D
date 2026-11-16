@@ -167,17 +167,34 @@ dsp3d_result dsp3d_scale_rgb565(const uint16_t *s, uint32_t sw, uint32_t sh, uin
         dw > 2047 || dh > 2047 || ((uintptr_t)s & 1u) || ((uintptr_t)d & 1u) ||
         (uint64_t)ss * sh > SIZE_MAX / 2 || (uint64_t)ds * dh > SIZE_MAX / 2)
         return DSP3D_INVALID_ARGUMENT;
-    if (dw == sw * 2 && dh == sh * 2) {
+    if (dw == sw && dh == sh) {
+        for(uint32_t y=0;y<sh;y++)
+            for(uint32_t x=0;x<sw;x++) d[(size_t)y*ds+x]=s[(size_t)y*ss+x];
+    } else if (dw == sw * 2 && dh == sh * 2) {
         for (uint32_t y = 0; y < sh; y++)
             for (uint32_t x = 0; x < sw; x++) {
                 uint32_t pair = (uint32_t)s[y * ss + x] * 0x10001u;
                 memcpy(d + (size_t)(y * 2) * ds + x * 2, &pair, 4);
                 memcpy(d + (size_t)(y * 2 + 1) * ds + x * 2, &pair, 4);
             }
-    } else
-        for (uint32_t y = 0; y < dh; y++)
-            for (uint32_t x = 0; x < dw; x++)
-                d[(size_t)y * ds + x] = s[(size_t)(y * sh / dh) * ss + x * sw / dw];
+    } else if (dw == sw * 4 && dh == sh * 4) {
+        for(uint32_t y=0;y<sh;y++) {
+            uint16_t *row=d+(size_t)y*4*ds;
+            for(uint32_t x=0;x<sw;x++) {
+                uint32_t pair=(uint32_t)s[(size_t)y*ss+x]*0x10001u;
+                memcpy(row+x*4,&pair,4);memcpy(row+x*4+2,&pair,4);
+            }
+            for(unsigned j=1;j<4;j++) memcpy(row+(size_t)j*ds,row,(size_t)dw*2);
+        }
+    } else {
+        /* Resolve horizontal divisions once, outside the image loop. */
+        uint16_t columns[2047];
+        for(uint32_t x=0;x<dw;x++) columns[x]=(uint16_t)(x*sw/dw);
+        for(uint32_t y=0;y<dh;y++) {
+            const uint16_t *row=s+(size_t)(y*sh/dh)*ss;
+            for(uint32_t x=0;x<dw;x++) d[(size_t)y*ds+x]=row[columns[x]];
+        }
+    }
     return DSP3D_OK;
 }
 /* Volatile paired stores prevent GCC from replacing this with nano-libc's
@@ -409,6 +426,27 @@ static void raster(dsp3d_context *c, screen_vertex a, screen_vertex b, screen_ve
     /* Top-left ownership avoids shading shared edges twice. */
     int tl0 = (dy < by) || (dy == by && dx > bx), tl1 = (ay < dy) || (ay == dy && ax > dx),
         tl2 = (by < ay) || (by == ay && bx > ax);
+    /* Preserve the small opaque flat/Gouraud inner loop. Advanced attributes
+     * are interpolated only when a material actually needs them. */
+    if(!texture && !spec_scale && opacity==255 && !emission && !unlit) {
+        for(int y=y0;y<=y1;y++) {
+            int32_t w0=e0,w1=e1,w2=e2;
+            float z=zrow,l=lrow;
+            size_t di=(size_t)y*c->depth_stride+(unsigned)x0;
+            size_t ci=(size_t)y*c->color_stride+(unsigned)x0;
+            for(int x=x0;x<=x1;x++,di++,ci++) {
+                if((w0>0 || (!w0 && tl0)) && (w1>0 || (!w1 && tl1)) &&
+                   (w2>0 || (!w2 && tl2)) && z>=c->depth[di]) {
+                    c->depth[di]=z;
+                    c->color[ci]=mode==DSP3D_FLAT ? flat_color : shades[intensity(l)];
+                    c->stats.shaded_pixels++;
+                }
+                w0+=ex0;w1+=ex1;w2+=ex2;z+=zx;l+=lx;
+            }
+            e0+=ey0;e1+=ey1;e2+=ey2;zrow+=zy;lrow+=ly;
+        }
+        return;
+    }
     for (int y = y0; y <= y1; y++) {
         int32_t w0 = e0, w1 = e1, w2 = e2;
         float z = zrow, l = lrow, u = ur, v = vr, spec = sr;
