@@ -1,0 +1,40 @@
+DEMO,0,MetaMask Fox
+frame=371 demo=0 model=MetaMask Fox mode=Flat width=800 height=280 clear_us=6476 render_us=7673 scale_us=4569 ui_us=9322 present_us=4065 fps10=312 tris=113 pixels=19132 lod=0 rejected=0
+frame=402 demo=0 model=MetaMask Fox mode=Flat width=800 height=280 clear_us=6478 render_us=7672 scale_us=4569 ui_us=9323 present_us=4064 fps10=303 tris=113 pixels=19132 lod=0 rejected=0
+frame=433 demo=0 model=MetaMask Fox mode=Flat width=800 height=280 clear_us=6475 render_us=7672 scale_us=4568 ui_us=9322 present_us=4068 fps10=303 tris=113 pixels=19132 lod=0 rejected=0
+DEMO,1,Suzanne
+frame=463 demo=1 model=Suzanne mode=Gouraud width=800 height=280 clear_us=6478 render_us=10284 scale_us=4791 ui_us=9327 present_us=16057 fps10=204 tris=634 pixels=10819 lod=0 rejected=0
+frame=494 demo=1 model=Suzanne mode=Gouraud width=800 height=280 clear_us=6388 render_us=10244 scale_us=4729 ui_us=9325 present_us=1420 fps10=303 tris=634 pixels=10819 lod=0 rejected=0
+frame=525 demo=1 model=Suzanne mode=Gouraud width=800 height=280 clear_us=6389 render_us=10248 scale_us=4732 ui_us=9326 present_us=1411 fps10=303 tris=634 pixels=10819 lod=0 rejected=0
+DEMO,2,Perspective texture
+frame=554 demo=2 model=Perspective texture mode=Textured width=800 height=280 clear_us=6388 render_us=58058 scale_us=4837 ui_us=9418 present_us=15915 fps10=103 tris=2 pixels=48204 lod=0 rejected=0
+frame=566 demo=2 model=Perspective texture mode=Textured width=800 height=280 clear_us=6832 render_us=58019 scale_us=4654 ui_us=9416 present_us=1905 fps10=123 tris=2 pixels=48204 lod=0 rejected=0
+frame=578 demo=2 model=Perspective texture mode=Textured width=800 height=280 clear_us=6834 render_us=58015 scale_us=4654 ui_us=9415 present_us=1908 fps10=123 tris=2 pixels=48204 lod=0 rejected=0
+frame=590 demo=2 model=Perspective texture mode=Textured width=800 height=280 clear_us=6835 render_us=58021 scale_us=4655 ui_us=9416 present_us=1900 fps10=121 tris=2 pixels=48204 lod=0 rejected=0
+DEMO,3,Alpha materials
+frame=601 demo=3 model=Alpha materials mode=Flat width=800 height=280 clear_us=6655 render_us=59170 scale_us=4799 ui_us=9395 present_us=17045 fps10=102 tris=26 pixels=68595 lod=0 rejected=0
+frame=612 demo=3 model=Alpha materials mode=Flat width=800 height=280 clear_us=6655 render_us=59170 scale_us=4795 ui_us=9397 present_us=17048 fps10=102 tris=26 pixels=68595 lod=0 rejected=0
+DEMO,4,Light and shadow
+frame=623 demo=4 model=Light and shadow mode=Textured width=800 height=280 clear_us=6654 render_us=46546 scale_us=4776 ui_us=9444 present_us=11211 fps10=121 tris=19 pixels=77058 lod=0 rejected=0
+frame=636 demo=4 model=Light and shadow mode=Textured width=800 height=280 clear_us=7781 render_us=46461 scale_us=4773 ui_us=9443 present_us=12367 fps10=123 tris=19 pixels=77058 lod=0 rejected=0
+frame=649 demo=4 model=Light and shadow mode=Textured width=800 height=280 clear_us=7780 render_us=46460 scale_us=4774 ui_us=9444 present_us=12366 fps10=123 tris=19 pixels=77058 lod=0 rejected=0
+DEMO,5,Scene hierarchy
+frame=664 demo=5 model=Scene hierarchy mode=Flat width=800 height=280 clear_us=6331 render_us=14582 scale_us=4808 ui_us=9392 present_us=13232 fps10=204 tris=658 pixels=5973 lod=0 rejected=0
+frame=685 demo=5 model=Scene hierarchy mode=Flat width=800 height=280 clear_us=6332 render_us=14694 scale_us=4809 ui_us=9393 present_us=13117 fps10=204 tris=658 pixels=5973 lod=0 rejected=0
+frame=706 demo=5 model=Scene hierarchy mode=Flat width=800 height=280 clear_us=6331 render_us=14598 scale_us=4809 ui_us=9392 present_us=13216 fps10=208 tris=658 pixels=5973 lod=0 rejected=0
+DEMO,6,Keyframe animation
+frame=727 demo=6 model=Keyframe animation mode=Gouraud width=800 height=280 clear_us=6362 render_us=16937 scale_us=4791 ui_us=9457 present_us=10798 fps10=204 tris=638 pixels=9790 lod=0 rejected=0
+frame=748 demo=6 model=Keyframe animation mode=Gouraud width=800 height=280 clear_us=6362 render_us=16936 scale_us=4788 ui_us=9459 present_us=10801 fps10=204 tris=638 pixels=9790 lod=0 rejected=0
+frame=769 demo=6 model=Keyframe animation mode=Gouraud width=800 height=280 clear_us=6362 render_us=16950 scale_us=4790 ui_us=9459 present_us=10784 fps10=208 tris=638 pixels=9790 lod=0 rejected=0
+DEMO,7,Skeletal ribbon
+frame=792 demo=7 model=Skeletal ribbon mode=Gouraud width=800 height=280 clear_us=6233 render_us=2258 scale_us=4837 ui_us=9380 present_us=9397 fps10=312 tris=16 pixels=7190 lod=0 rejected=0
+frame=823 demo=7 model=Skeletal ribbon mode=Gouraud width=800 height=280 clear_us=6233 render_us=2262 scale_us=4839 ui_us=9379 present_us=9391 fps10=312 tris=16 pixels=7190 lod=0 rejected=0
+frame=854 demo=7 model=Skeletal ribbon mode=Gouraud width=800 height=280 clear_us=6234 render_us=2262 scale_us=4841 ui_us=9379 present_us=9389 fps10=303 tris=16 pixels=7190 lod=0 rejected=0
+DEMO,8,Compact mesh + LOD
+frame=884 demo=8 model=Compact mesh + LOD mode=Gouraud width=800 height=280 clear_us=6388 render_us=10260 scale_us=4738 ui_us=9459 present_us=1261 fps10=312 tris=634 pixels=10817 lod=0 rejected=0
+frame=914 demo=8 model=Compact mesh + LOD mode=Gouraud width=800 height=280 clear_us=6386 render_us=10266 scale_us=4735 ui_us=9458 present_us=1260 fps10=312 tris=634 pixels=10817 lod=0 rejected=0
+frame=944 demo=8 model=Compact mesh + LOD mode=Gouraud width=800 height=280 clear_us=6388 render_us=10269 scale_us=4740 ui_us=9459 present_us=1251 fps10=312 tris=634 pixels=10817 lod=0 rejected=0
+DEMO,9,Clip and pick
+frame=969 demo=9 model=Clip and pick mode=Flat width=800 height=280 clear_us=7898 render_us=54318 scale_us=4536 ui_us=9385 present_us=4688 fps10=121 tris=657 pixels=77273 lod=0 rejected=1
+frame=982 demo=9 model=Clip and pick mode=Flat width=800 height=280 clear_us=7899 render_us=54326 scale_us=4532 ui_us=9385 present_us=4684 fps10=123 tris=657 pixels=77273 lod=0 rejected=1
+frame=995 demo=9 model=Clip and pick mode=Flat width=800 height=280 clear_us=7899 render_us=54329 scale_us=4536 ui_us=9385 present_us=4676 fps10=123 tris=657 pixels=77273 lod=0 rejected=1

@@ -8,5 +8,8 @@
 *.cmake text eol=lf
 *.stl binary
 *.d3m -text
+*.d3s -text
+*.catalog text eol=lf
+assets/source/**/*.obj text eol=lf
 *.a -text
 *.png -text

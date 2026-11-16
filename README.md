@@ -1,5 +1,13 @@
 # dsp3D
 
+**Development checkpoint (2026-11-16):** the extended engine and ten-example
+gallery are committed on `main`. Both board builds pass; the F769 was flashed
+and the owner exercised the gallery/settings. Development was stopped at the
+owner's request before the final validation/documentation pass. See
+[the v3 checkpoint](docs/CHECKPOINT_V3.md) for delivered features, new measured
+performance and remaining checks. Performance tables below describe the earlier
+v2 firmware, not the current gallery.
+
 An allocation-free C11 software-rendering library for Cortex-M, with a CMSIS-DSP
 backend optimized for Cortex-M7 and complete STM32 Discovery model-viewer projects.
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-param([string]$Port='COM14',[string]$Output='build/benchmark.csv',[int]$TimeoutSeconds=45)
+param([string]$Port='COM14',[string]$Output='build/benchmark.csv',[int]$TimeoutSeconds=45,[switch]$EqualResolution)
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $targetPath=[IO.Path]::GetFullPath((Join-Path $projectRoot $Output))
@@ -9,7 +9,8 @@ $serial.ReadTimeout=200
 $rows=[Collections.Generic.List[string]]::new()
 $raw=[Collections.Generic.List[string]]::new()
 try {
-    $serial.Open();$serial.DiscardInBuffer();$serial.Write('b')
+    $serial.Open();$serial.DiscardInBuffer()
+    if($EqualResolution){$serial.Write('t')}else{$serial.Write('b')}
     $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while($rows.Count -lt 8 -and [DateTime]::UtcNow -lt $deadline){
         try {
