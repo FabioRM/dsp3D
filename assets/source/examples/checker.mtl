@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: BSD-3-Clause
+newmtl Checker
+Kd 1 1 1
+Ks .2 .2 .2
+map_Kd checker.png

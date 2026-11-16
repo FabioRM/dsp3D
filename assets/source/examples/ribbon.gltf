@@ -1,0 +1,206 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "dsp3D generate_examples.py",
+    "copyright": "BSD-3-Clause, Fabio Angeletti"
+  },
+  "buffers": [
+    {
+      "byteLength": 1332,
+      "uri": "data:application/octet-stream;base64,mpmZvgAAgL8AAAAAmpmZPgAAgL8AAAAAmpmZvgAAQL8AAAAAmpmZPgAAQL8AAAAAmpmZvgAAAL8AAAAAmpmZPgAAAL8AAAAAmpmZvgAAgL4AAAAAmpmZPgAAgL4AAAAAmpmZvgAAAAAAAAAAmpmZPgAAAAAAAAAAmpmZvgAAgD4AAAAAmpmZPgAAgD4AAAAAmpmZvgAAAD8AAAAAmpmZPgAAAD8AAAAAmpmZvgAAQD8AAAAAmpmZPgAAQD8AAAAAmpmZvgAAgD8AAAAAmpmZPgAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAAA+AACAPwAAAD4AAAAAAACAPgAAgD8AAIA+AAAAAAAAwD4AAIA/AADAPgAAAAAAAAA/AACAPwAAAD8AAAAAAAAgPwAAgD8AACA/AAAAAAAAQD8AAIA/AABAPwAAAAAAAGA/AACAPwAAYD8AAAAAAACAPwAAgD8AAIA/AAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAQAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAABAPwAAgD4AAAAAAAAAAAAAQD8AAIA+AAAAAAAAAAAAAAA/AAAAPwAAAAAAAAAAAAAAPwAAAD8AAAAAAAAAAAAAgD4AAEA/AAAAAAAAAAAAAIA+AABAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAABAAMAAAADAAIAAgADAAUAAgAFAAQABAAFAAcABAAHAAYABgAHAAkABgAJAAgACAAJAAsACAALAAoACgALAA0ACgANAAwADAANAA8ADAAPAA4ADgAPABEADgARABAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAACAPwAAAEAAAEBAAACAQAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAANdhxz6nyms/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAA12HHvqfKaz8AAAAAAAAAAAAAAAAAAIA/"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 216
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 216,
+      "byteLength": 216
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 432,
+      "byteLength": 144
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 144
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 720,
+      "byteLength": 288
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1008,
+      "byteLength": 96
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1104,
+      "byteLength": 128
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1232,
+      "byteLength": 20
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1252,
+      "byteLength": 80
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 18,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 18,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5123,
+      "count": 48,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 2,
+      "type": "MAT4"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 5,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5126,
+      "count": 5,
+      "type": "VEC4"
+    }
+  ],
+  "images": [
+    {
+      "uri": "checker.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    }
+  ],
+  "materials": [
+    {
+      "name": "Ribbon checker",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "roughnessFactor": 0.8,
+        "metallicFactor": 0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2,
+            "JOINTS_0": 3,
+            "WEIGHTS_0": 4
+          },
+          "indices": 5,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "skin": 0
+    },
+    {
+      "children": [
+        2
+      ]
+    },
+    {}
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1
+      ]
+    }
+  ],
+  "scene": 0,
+  "skins": [
+    {
+      "joints": [
+        1,
+        2
+      ],
+      "inverseBindMatrices": 6
+    }
+  ],
+  "animations": [
+    {
+      "name": "Ribbon wave",
+      "samplers": [
+        {
+          "input": 7,
+          "output": 8
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 2,
+            "path": "rotation"
+          }
+        }
+      ]
+    }
+  ]
+}

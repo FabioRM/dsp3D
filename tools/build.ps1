@@ -21,7 +21,7 @@ try {
     $output="build/$Board";if($Scalar){$output+='-scalar'}
     New-Item -ItemType Directory -Force "$output/obj" | Out-Null
     $cpu=@('-mcpu=cortex-m7','-mthumb',"-mfpu=$fpu",'-mfloat-abi=hard')
-    $includes=@('inc','assets/generated','ports/common',"ports/$port","$hal/Inc","$hal/Inc/Legacy","$device/Include","$sdk/Drivers/CMSIS/Include","$sdk/Drivers/CMSIS/DSP/Include",$bsp,$fat,"$sdk/Utilities/Fonts")
+    $includes=@('inc','assets/generated','examples/scenes','ports/common',"ports/$port","$hal/Inc","$hal/Inc/Legacy","$device/Include","$sdk/Drivers/CMSIS/Include","$sdk/Drivers/CMSIS/DSP/Include",$bsp,$fat,"$sdk/Utilities/Fonts")
     $flags=@($cpu)+@('-std=c11','-O3','-g3','-ffunction-sections','-fdata-sections','-fno-strict-aliasing','-ffp-contract=fast','-Wall','-Wextra','-Wno-unused-parameter',"-D$chip",'-DUSE_HAL_DRIVER','-DARM_MATH_CM7')
     if(!$Scalar){$flags+='-DDSP3D_CMSIS'}
     $flags+='-D__FPU_PRESENT=1U'
@@ -29,7 +29,7 @@ try {
     foreach($include in $includes){$flags+="-I$include"}
     $halUnits=@('hal','hal_cortex','hal_rcc','hal_rcc_ex','hal_gpio','hal_dma','hal_dma2d','hal_flash','hal_flash_ex','hal_pwr','hal_pwr_ex','hal_i2c','hal_i2c_ex','hal_uart','hal_uart_ex','hal_sdram','hal_ltdc','hal_ltdc_ex','hal_sd','ll_fmc','ll_sdmmc')
     if($Board -eq 'f769'){$halUnits+='hal_dsi'}
-    $sources=@('src/dsp3D.c','src/dsp3D_model.c','src/dsp3D_geometry.c','src/dsp3D_math.c','src/dsp3D_material.c','src/dsp3D_scene.c','src/dsp3D_scene_io.c','src/dsp3D_asset.c','examples/viewer/main.c','ports/common/board.c','ports/common/sd_diskio.c','ports/common/syscalls.c','assets/generated/metamask.c','assets/generated/suzanne.c',"$fat/ff.c","$fat/option/ccsbcs.c","$device/Source/Templates/system_stm32f7xx.c","$device/Source/Templates/gcc/startup_$startup.s")
+    $sources=@('src/dsp3D.c','src/dsp3D_model.c','src/dsp3D_geometry.c','src/dsp3D_math.c','src/dsp3D_material.c','src/dsp3D_scene.c','src/dsp3D_scene_io.c','src/dsp3D_asset.c','examples/scenes/scenes.c','examples/scenes/gallery.c','assets/generated/suzanne_compact.c','assets/generated/suzanne_lod1.c','assets/generated/suzanne_lod2.c','examples/viewer/main.c','ports/common/board.c','ports/common/sd_diskio.c','ports/common/syscalls.c','assets/generated/metamask.c','assets/generated/suzanne.c',"$fat/ff.c","$fat/option/ccsbcs.c","$device/Source/Templates/system_stm32f7xx.c","$device/Source/Templates/gcc/startup_$startup.s")
     foreach($unit in $halUnits){$sources+="$hal/Src/stm32f7xx_$unit.c"}
     foreach($suffix in @('','_lcd','_sdram','_ts','_sd')){$sources+="$bsp/$bspPrefix$suffix.c"}
     if($Board -eq 'f746'){$sources+="$sdk/Drivers/BSP/Components/ft5336/ft5336.c"}

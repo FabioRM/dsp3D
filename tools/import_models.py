@@ -481,6 +481,7 @@ class Gltf:
                                  len(payload), zlib.crc32(payload), duration, 1, 0)
             scene_path = output.with_suffix('.d3s') if number == 0 else output.with_stem(output.stem+f'-animation{number}').with_suffix('.d3s')
             scene_path.write_bytes(header+payload)
+            scene_path.with_suffix('.catalog').write_text('\n'.join(paths)+'\n', encoding='ascii')
         output.with_suffix('.scene.json').write_text(json.dumps(dict(models=paths, nodes=len(nodes),
             animations=len(d.get('animations', [])), shading='Lambert/Blinn approximation of base color and roughness'), indent=2)+'\n', encoding='utf8')
         return catalog[0]

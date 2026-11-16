@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 ENTRY(Reset_Handler)
 MEMORY {
- FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+ FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 768K
  RAM (rw) : ORIGIN = 0x20000000, LENGTH = 64K
 }
 /* Application state and stack use tightly coupled SRAM. DMA never accesses it. */

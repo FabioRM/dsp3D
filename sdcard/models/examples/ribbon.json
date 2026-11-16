@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "vertices": 18,
+  "triangles": 16,
+  "bytes": 4960,
+  "compact": true,
+  "materials": [
+    "Ribbon checker",
+    "Default"
+  ],
+  "textures": 2,
+  "joints": 2,
+  "bounds": [
+    [
+      -0.30000001192092896,
+      -1.0,
+      0.0
+    ],
+    [
+      0.30000001192092896,
+      1.0,
+      0.0
+    ]
+  ]
+}

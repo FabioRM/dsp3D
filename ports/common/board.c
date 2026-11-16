@@ -9,6 +9,17 @@ static uint16_t *buffers[2];
 static float *depth_buffer;
 static dsp3d_cached_vertex *vertex_cache;
 static uint8_t *model_buffers[2];
+static uint8_t *asset_workspaces[2], *app_buffer;
+static uint16_t *render_buffer;
+#ifdef BOARD_F769
+#define SDRAM_LIMIT 0xc0fff000u
+#define PREF_ADDRESS 0x081c0000u
+#define PREF_SECTOR FLASH_SECTOR_11
+#else
+#define SDRAM_LIMIT 0xc07ff000u
+#define PREF_ADDRESS 0x080c0000u
+#define PREF_SECTOR FLASH_SECTOR_7
+#endif
 static unsigned back = 1;
 static volatile unsigned reload_pending;
 static size_t aligned(size_t n) {
@@ -64,7 +75,11 @@ static void mpu_init(void) {
     m.Enable = MPU_REGION_ENABLE;
     m.Number = MPU_REGION_NUMBER0;
     m.BaseAddress = 0xc0000000;
+#ifdef BOARD_F769
+    m.Size = MPU_REGION_SIZE_16MB;
+#else
     m.Size = MPU_REGION_SIZE_8MB;
+#endif
     m.AccessPermission = MPU_REGION_FULL_ACCESS;
     m.IsBufferable = MPU_ACCESS_BUFFERABLE;
     m.IsCacheable = MPU_ACCESS_CACHEABLE;
@@ -140,11 +155,12 @@ void board_init(void) {
     clock_init();
     console_init();
     BSP_PB_Init(BOARD_BUTTON, BUTTON_MODE_GPIO);
+    BSP_SD_Detect_MspInit(NULL,NULL);
     board_log("\r\ndsp3D " DSP3D_VERSION " / " BOARD_NAME " / 200 MHz\r\n");
     if (BSP_LCD_Init() != LCD_OK)
         board_panic(5);
     /* The BSP LCD initialization also initializes SDRAM. Test a reserved final page. */
-    volatile uint32_t *probe = (volatile uint32_t *)0xc07ff000;
+    volatile uint32_t *probe = (volatile uint32_t *)SDRAM_LIMIT;
     for (unsigned i = 0; i < 1024; i++)
         probe[i] = 0x5a5a0000u ^ i;
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)probe, 4096);
@@ -165,7 +181,15 @@ void board_init(void) {
     p += BOARD_MODEL_BYTES;
     model_buffers[1] = (uint8_t *)p;
     p += BOARD_MODEL_BYTES;
-    if (p > 0xc07ff000)
+    render_buffer = (uint16_t *)p;
+    p += color_bytes;
+    asset_workspaces[0] = (uint8_t *)p;
+    p += BOARD_WORKSPACE_BYTES;
+    asset_workspaces[1] = (uint8_t *)p;
+    p += BOARD_WORKSPACE_BYTES;
+    app_buffer = (uint8_t *)p;
+    p += BOARD_APP_BYTES;
+    if (p > SDRAM_LIMIT)
         board_panic(7);
     memset(buffers[0], 0, color_bytes * 2);
     SCB_CleanDCache_by_Addr((uint32_t *)buffers[0], (int32_t)(color_bytes * 2));
@@ -222,7 +246,7 @@ void board_frame_begin(dsp3d_context *c, uint16_t background) {
         HAL_DMA2D_PollForTransfer(&fill, 100) != HAL_OK)
         board_panic(11);
     SCB_InvalidateDCache_by_Addr((uint32_t *)c->color, bytes);
-    dsp3d_clear_depth(c);
+    if(c->depth) dsp3d_clear_depth(c);
 }
 void board_present(dsp3d_context *c) {
     SCB_CleanDCache_by_Addr((uint32_t *)c->color,
@@ -287,4 +311,51 @@ uint32_t board_cycles(void) {
 }
 void *board_model_buffer(unsigned slot) {
     return model_buffers[slot & 1u];
+}
+void *board_asset_workspace(unsigned slot) { return asset_workspaces[slot & 1u]; }
+void *board_app_buffer(void) { return app_buffer; }
+uint16_t *board_render_buffer(void) { return render_buffer; }
+/* Append-only records. The final flash sector is excluded by the linker.
+ * A commit word is programmed last; interrupted writes leave the previous record usable. */
+int board_preferences_load(void *data, size_t bytes) {
+    if (!data || bytes > 112) return 0;
+    const uint32_t *latest = NULL;
+    for (uintptr_t p=PREF_ADDRESS; p<PREF_ADDRESS+256u*1024u; p+=128) {
+        const uint32_t *record=(const uint32_t *)p;
+        if (record[0]==0x46525044 && record[1]==bytes && record[31]==0x434f4d54 &&
+            record[30]==dsp3d_crc32(record,120)) latest=record;
+    }
+    if (!latest) return 0;
+    memcpy(data,latest+2,bytes);
+    return 1;
+}
+int board_preferences_save(const void *data, size_t bytes) {
+    if (!data || bytes > 112) return 0;
+    uint32_t record[32];
+    memset(record,255,sizeof(record));
+    record[0]=0x46525044;record[1]=(uint32_t)bytes;
+    memcpy(record+2,data,bytes);
+    record[30]=dsp3d_crc32(record,120);record[31]=0x434f4d54;
+    uintptr_t target=0;
+    for (uintptr_t p=PREF_ADDRESS; p<PREF_ADDRESS+256u*1024u && !target; p+=128) {
+        const uint32_t *old=(const uint32_t *)p;
+        unsigned blank=1;
+        for(unsigned i=0;i<32;i++) blank &= old[i]==UINT32_MAX;
+        if(blank) target=p;
+    }
+    if(HAL_FLASH_Unlock()!=HAL_OK) return 0;
+    int ok=1;
+    if(!target) {
+        FLASH_EraseInitTypeDef erase={0};
+        erase.TypeErase=FLASH_TYPEERASE_SECTORS;erase.Sector=PREF_SECTOR;
+        erase.NbSectors=1;erase.VoltageRange=FLASH_VOLTAGE_RANGE_3;
+        uint32_t error;
+        ok=HAL_FLASHEx_Erase(&erase,&error)==HAL_OK;
+        target=PREF_ADDRESS;
+    }
+    for(unsigned i=0;i<32 && ok;i++)
+        ok=HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,(uint32_t)target+i*4,record[i])==HAL_OK;
+    HAL_FLASH_Lock();
+    SCB_InvalidateDCache_by_Addr((uint32_t *)target,128);
+    return ok && !memcmp((const void *)target,record,sizeof(record));
 }

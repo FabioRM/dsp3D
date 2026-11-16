@@ -28,6 +28,13 @@ try {
     if($LASTEXITCODE){throw 'Gallery test compilation failed'}
     & build/native/gallery-tests.exe | Set-Content build/native/gallery-checksums.csv
     if($LASTEXITCODE){throw 'Gallery regression tests failed'}
+    & $python tests/prepare_sd_fixture.py
+    if($LASTEXITCODE){throw 'SD fixture preparation failed'}
+    $fat='third_party/STM32CubeF7/Middlewares/Third_Party/FatFs/src'
+    & $gcc -Itests/fakes @flags @core @gallery -Iexamples/scenes -Iports/common "-I$fat" -Ithird_party/STM32CubeF7/Utilities/Fonts -DBOARD_F769 tests/test_viewer.c third_party/STM32CubeF7/Utilities/Fonts/font16.c third_party/STM32CubeF7/Utilities/Fonts/font20.c third_party/STM32CubeF7/Utilities/Fonts/font24.c -lm -o build/native/viewer-tests.exe
+    if($LASTEXITCODE){throw 'Viewer fixture compilation failed'}
+    & build/native/viewer-tests.exe
+    if($LASTEXITCODE){throw 'Viewer integration tests failed'}
     & $python tests/test_converter.py
     if($LASTEXITCODE){throw 'Converter tests failed'}
     & $gcc @flags @core -Iexamples/scenes examples/desktop/preview.c examples/scenes/scenes.c -lm -o build/native/preview.exe

@@ -1,0 +1,8 @@
+{
+  "models": [
+    "ribbon.d3m"
+  ],
+  "nodes": 3,
+  "animations": 1,
+  "shading": "Lambert/Blinn approximation of base color and roughness"
+}

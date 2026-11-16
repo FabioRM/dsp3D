@@ -120,7 +120,7 @@
 
 
 #define	_USE_LFN	1
-#define	_MAX_LFN	63
+#define	_MAX_LFN	127
 /* The _USE_LFN switches the support of long file name (LFN).
 /
 /   0: Disable support of LFN. _MAX_LFN has no effect.

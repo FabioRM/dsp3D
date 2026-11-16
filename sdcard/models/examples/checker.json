@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "vertices": 4,
+  "triangles": 2,
+  "bytes": 3080,
+  "compact": true,
+  "materials": [
+    "Default",
+    "Checker"
+  ],
+  "textures": 1,
+  "joints": 0,
+  "bounds": [
+    [
+      -1.0,
+      -1.0,
+      0.0
+    ],
+    [
+      1.0,
+      1.0,
+      0.0
+    ]
+  ]
+}
