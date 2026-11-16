@@ -1,9 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
-param([ValidateSet('f746','f769')][string]$Board='f746',[string]$Output='build/capture.bmp',[switch]$ResetView)
+param([ValidateSet('f746','f769')][string]$Board='f746',[string]$Output='build/capture.bmp',[switch]$ResetView,[ValidateSet('stlink','jlink')][string]$Probe='stlink')
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
 try {
+    if($Probe -eq 'jlink') {
+        if($ResetView){throw 'Use the viewer reset command x before a J-Link capture.'}
+        & tools/local/python/python.exe tools/jlink_capture.py --board $Board $Output
+        if($LASTEXITCODE){throw 'J-Link framebuffer capture failed'}
+        return
+    }
     $width=if($Board -eq 'f746'){480}else{800};$height=if($Board -eq 'f746'){272}else{480}
     $targetPath=[IO.Path]::GetFullPath((Join-Path $projectRoot $Output))
     New-Item -ItemType Directory -Force (Split-Path $targetPath) | Out-Null
